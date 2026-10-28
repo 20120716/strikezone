@@ -186,6 +186,7 @@ function spawnWave(){const count=Math.min(7+(wave-1)*2,20);enemies=[];for(let i=
 function startGame(){started=true;dead=false;player={x:0,z:18,yaw:0,pitch:0,hp:100};kills=0;wave=1;ammo=guns.map(g=>g.mag);reserve=guns.map(g=>g.reserve);reloading=false;setWeapon(0);spawnWave();overlay.classList.add('hidden');hud.style.display='block';if(matchMedia('(pointer:coarse)').matches){controls.style.display='block';}else{controls.style.display='none';canvas.requestPointerLock?.();}lastTime=performance.now();}
 function gameOver(){dead=true;started=false;fireHeld=false;aimHeld=false;overlay.classList.remove('hidden');overlayDesc.innerHTML='戦闘終了。<b style="color:#54e7ff">'+kills+' TARGETS</b> を無力化し、WAVE '+String(wave).padStart(2,'0')+' まで到達。もう一度出撃して記録を更新しよう。';overlayHelp.innerHTML='<b>操作：</b>PCはWASD・マウス・左クリック・R。iPadは左スティック・右側スワイプ・FIRE。<br>武器はいつでも切替可能。遮蔽物を使い、敵の射線から外れよう。';startBtn.textContent='REDEPLOY / もう一度';hud.style.display='none';controls.style.display='none';document.exitPointerLock?.();}
 startBtn.addEventListener('click',startGame);
+window.addEventListener('strikezone:connected', () => { if (!started) startGame(); });
 function camEye(){return [player.x,1.62,player.z];}
 function viewDir(){return norm([Math.sin(player.yaw)*Math.cos(player.pitch),Math.sin(player.pitch),-Math.cos(player.yaw)*Math.cos(player.pitch)]);}
 function reload(){if(!started||reloading||ammo[currentGun]>=guns[currentGun].mag||reserve[currentGun]<=0)return;reloading=true;reloadEnd=performance.now()+guns[currentGun].reload*1000;updateUI();}
