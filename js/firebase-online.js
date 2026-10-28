@@ -70,8 +70,8 @@ async function connect(code, asHost = false) {
       const list = Object.values(players).filter(p => p && typeof p.x === "number" && typeof p.z === "number");
       const host = list.find(p => p.host);
       if (!isRoomHost && host && host.mode) { matchMode = host.mode; modeSelect.value = matchMode; }
-      localTeam = teamFor(uid, matchMode);
-      const others = list.filter(p => p.uid !== uid);
+      localTeam = teamFor(uid, matchMode, list);
+      const others = list.filter(p => p.uid !== uid).map(p => ({ ...p, team: teamFor(p.uid, matchMode, list) }));
       window.STRIKEZONE_REMOTE_PLAYERS = others;
       window.dispatchEvent(new CustomEvent("strikezone:players", { detail: { players: others, count: Object.keys(players).length, roomCode } }));
       const count = Object.keys(players).length;
@@ -91,9 +91,11 @@ async function connect(code, asHost = false) {
 hostBtn.addEventListener("click", () => { const code = makeCode(); codeInput.value = code; connect(code, true); });
 joinBtn.addEventListener("click", () => connect(codeInput.value, false));
 
-function teamFor(uid, mode) {
-  const hash = [...String(uid)].reduce((n, c) => (n * 31 + c.charCodeAt(0)) >>> 0, 7);
-  return hash % (mode === "squads" ? 4 : 8);
+function teamFor(uid, mode, players = []) {
+  const hashUid = value => [...String(value)].reduce((n, c) => (n * 31 + c.charCodeAt(0)) >>> 0, 7);
+  const ids = [...new Set([...players.map(p => p.uid).filter(Boolean), uid])].sort((a, b) => hashUid(a) - hashUid(b));
+  const slot = Math.max(0, ids.indexOf(uid));
+  return mode === "squads" ? Math.floor(slot / 2) % 4 : slot % 8;
 }
 
 window.addEventListener("strikezone:state", event => {
