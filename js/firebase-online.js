@@ -63,7 +63,7 @@ async function connect(code, asHost = false) {
     const existing = existingSnap.val() || {};
     if (!existing[uid] && Object.keys(existing).length >= 8) { setStatus("この部屋は満員（最大8人）。別の部屋を作ってね。"); return; }
     if (unsubscribe) unsubscribe();
-    await set(playerRef, { uid, x:lastState.x, z:lastState.z, yaw:lastState.yaw, hp:lastState.hp, alive:lastState.alive, kills:lastState.kills, updatedAt:serverTimestamp() });
+    await set(playerRef, { uid, x:lastState.x, z:lastState.z, yaw:lastState.yaw, hp:lastState.hp, alive:lastState.alive, kills:lastState.kills, host:isRoomHost, mode:matchMode, team:teamFor(uid, matchMode), updatedAt:serverTimestamp() });
     await onDisconnect(playerRef).remove();
     unsubscribe = onValue(ref(db, `rooms/${roomCode}/players`), snap => {
       const players = snap.val() || {};
