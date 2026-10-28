@@ -71,6 +71,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080e16;col
   </div>
 </div>
 <script src="./js/map-data.js"></script>
+<script type="module" src="./js/firebase-online.js"></script>
 <script>
 (() => {
 'use strict';
@@ -215,6 +216,7 @@ function updateEnemies(dt,now){for(const e of enemies){const dx=player.x-e.x,dz=
     if(wall>=dist-.18){const chance=Math.min(.88,(e.role==='heavy'?.48:e.role==='scout'?.43:.36)+wave*.035);if(Math.random()<chance)damage((e.role==='heavy'?7:e.role==='scout'?4:5)+Math.min(wave,8));}
   }}
  if(enemies.length===0&&started){wave++;player.hp=Math.min(100,player.hp+16);spawnWave();updateUI();}}
+function drawRemotePlayer(p){const group=mul(T(p.x,0,p.z),RY(Math.PI-(p.yaw||0)));const suit=[.12,.42,.98],dark=[.045,.09,.2],accent=[.2,.92,1];localPart(group,cube,[0,1.18,0],[.62,.78,.34],suit);localPart(group,cube,[0,1.22,.19],[.43,.48,.08],dark);localPart(group,cube,[0,1.43,.235],[.28,.13,.045],accent);localPart(group,sphere,[0,1.87,0],[.31,.31,.29],dark);localPart(group,cube,[0,2.045,.015],[.49,.105,.34],suit);localPart(group,cube,[0,1.91,.245],[.29,.1,.025],accent);for(const side of [-1,1]){localPart(group,cube,[side*.43,1.17,.02],[.17,.48,.2],suit,0,0,side*-.12);localPart(group,cube,[side*.19,.48,0],[.2,.57,.22],dark);localPart(group,cube,[side*.19,.22,.08],[.23,.18,.34],dark);}draw(cube,modelAt([p.x,2.35,p.z],[1.0,.075,.07],player.yaw),[.03,.08,.12]);draw(cube,modelAt([p.x,2.35,p.z],[.9,.045,.078],player.yaw),[.12,.92,1]);}
 function drawEnemy(e){const yaw=Math.atan2(player.x-e.x,-(player.z-e.z));const base=T(e.x,0,e.z);const group=mul(base,RY(yaw));
  const flash=e.hit>0,heavy=e.role==='heavy',scout=e.role==='scout';
  const red=flash?[1,.9,.8]:heavy?[.38,.16,.12]:scout?[.12,.42,.4]:[.48,.12,.1],dark=[.09,.12,.15],armor=heavy?[.34,.29,.22]:scout?[.16,.34,.34]:[.25,.3,.33],metal=[.43,.5,.52];
@@ -253,9 +255,9 @@ function drawGun(now){const g=guns[currentGun],eye=camEye(),dir=viewDir(),right=
 const darken=(c,k)=>c.map(x=>x*k);
 function resize(){const dpr=Math.min(window.devicePixelRatio||1,1.55);const w=Math.floor(innerWidth*dpr),h=Math.floor(innerHeight*dpr);if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;gl.viewport(0,0,w,h);}}
 function render(now){resize();gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);const aspect=canvas.width/Math.max(1,canvas.height),fov=aimHeld?(currentGun===2?34:48):76;const eye=camEye(),dir=viewDir(),target=[eye[0]+dir[0],eye[1]+dir[1],eye[2]+dir[2]];const vp=mul(perspective(fov*Math.PI/180,aspect,.08,100),lookAt(eye,target,[0,1,0]));gl.uniformMatrix4fv(loc.vp,false,vp);
- drawArena();for(const e of enemies)drawEnemy(e);if(started)drawGun(now);
+ drawArena();for(const p of (window.STRIKEZONE_REMOTE_PLAYERS||[]))drawRemotePlayer(p);for(const e of enemies)drawEnemy(e);if(started)drawGun(now);
 }
-function frame(now){const dt=Math.min(.034,(now-(lastTime||now))/1000||0);lastTime=now;if(started){elapsed+=dt;movePlayer(dt);updateEnemies(dt,now);if(fireHeld)shoot(now);if(reloading&&now>=reloadEnd){const g=guns[currentGun],need=g.mag-ammo[currentGun],take=Math.min(need,reserve[currentGun]);ammo[currentGun]+=take;reserve[currentGun]-=take;reloading=false;updateUI();}recoil=Math.max(0,recoil-dt*.75);if(now-lastUi>130){updateUI();lastUi=now;}}
+function frame(now){const dt=Math.min(.034,(now-(lastTime||now))/1000||0);lastTime=now;if(started){elapsed+=dt;movePlayer(dt);updateEnemies(dt,now);if(fireHeld)shoot(now);if(reloading&&now>=reloadEnd){const g=guns[currentGun],need=g.mag-ammo[currentGun],take=Math.min(need,reserve[currentGun]);ammo[currentGun]+=take;reserve[currentGun]-=take;reloading=false;updateUI();}recoil=Math.max(0,recoil-dt*.75);if(now-lastUi>130){updateUI();lastUi=now;}if(now-(window.__szLastOnlineState||0)>100){window.__szLastOnlineState=now;window.dispatchEvent(new CustomEvent("strikezone:state",{detail:{x:player.x,z:player.z,yaw:player.yaw,hp:player.hp,alive:started&&!dead,kills}}));}}
  render(now);requestAnimationFrame(frame);}
 
 window.addEventListener('resize',resize);window.addEventListener('contextmenu',e=>e.preventDefault());
