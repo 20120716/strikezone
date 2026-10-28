@@ -143,6 +143,44 @@ function drawArena(){
    box([o.x,o.sy*.57,o.z+o.sz/2+.008],[Math.min(1.0,o.sx*.45),.09,.018],[.95,.39,.12]);}
  // Tall signal pylons give the arena scale and depth cues.
  for(const [x,z] of [[-24,-21],[24,-21],[-24,21],[24,21]]){box([x,1.6,z],[.8,3.2,.8],[.14,.25,.31]);box([x,3.25,z],[1,.16,1],[.9,.28,.1]);}
+ // Expanded industrial combat district: ruined buildings, roof lips, windows and steel braces.
+ const blocks=[
+  [-22,-20,7,7,5.8],[-10,-22,7,6,4.6],[10,-22,8,6,6.4],[22,-18,6,8,5.1],
+  [-23,1,6,8,4.7],[23,-1,7,7,6.0],[-21,20,8,6,5.4],[20,21,8,6,4.8],
+  [-11,20,5,5,3.8],[11,21,6,5,4.2]
+ ];
+ for(let i=0;i<blocks.length;i++){const [x,z,sx,sz,h]=blocks[i],shade=i%2?[.19,.25,.29]:[.22,.27,.3];
+   box([x,h/2-.02,z],[sx,h,sz],shade);
+   box([x,h+.06,z],[sx+.22,.16,sz+.22],[.34,.4,.42]);
+   for(let wx=-1;wx<=1;wx++){box([x+wx*sx*.25,h*.62,z+sz/2+.012],[.72,.92,.035],[.055,.12,.16]);box([x+wx*sx*.25,h*.62,z+sz/2+.04],[.08,1.08,.06],[.4,.46,.45]);}
+   box([x,h*.28,z-sz/2-.025],[sx*.68,.12,.06],[.92,.34,.11]);
+   for(let yy=1.2;yy<h-0.4;yy+=1.45){box([x-sx/2-.025,yy,z],[.06,.08,sz*.78],[.37,.43,.45]);}
+ }
+ // Catwalk-like overhead beams and gate frames make the arena feel connected.
+ for(const z of [-15,15]){box([0,4.5,z],[19,.22,.28],[.23,.3,.33]);for(const x of [-9,9])box([x,2.25,z],[.22,4.5,.22],[.28,.36,.39]);}
+ // Stacked supply crates, sandbag walls and hazard-marked barriers.
+ for(const [x,z,rot] of [[-16,-13,.2],[16,-13,-.3],[-17,13,-.2],[17,15,.25],[-2,-19,0],[7,17,.1]]){
+   for(let row=0;row<2;row++)for(let col=0;col<3;col++){const px=x+(col-1)*.92+(row%2)*.18,pz=z+row*.83;
+     box([px,.43+row*.86,pz],[.86,.82,.78],row?[.3,.34,.35]:[.22,.29,.32],rot);
+     box([px,.44+row*.86,pz+.402],[.42,.055,.018],[.91,.38,.1],rot);
+     box([px,.78+row*.86,pz+.407],[.04,.57,.02],[.1,.15,.17],rot);
+   }
+ }
+ for(const [x,z] of [[-8,-17],[14,4],[-17,-2],[4,19],[18,-10],[-15,16]]){
+   for(let i=0;i<5;i++){const px=x+(i-2)*.52;box([px,.3,z],[.55,.58,.42],[.43,.39,.29]);box([px,.59,z],[.56,.06,.43],[.57,.51,.39]);}
+ }
+ // Barrels, vents, light poles and glowing amber beacons.
+ for(const [x,z] of [[-7,-16],[6,-14],[17,8],[-17,9],[3,13],[-23,-5],[23,10]]){
+   draw(cylinder,modelAt([x,.48,z],[.38,.96,.38]),[.2,.29,.32]);
+   draw(cylinder,modelAt([x,.98,z],[.39,.08,.39]),[.48,.53,.53]);
+   box([x,.52,z+.195],[.35,.09,.018],[.92,.34,.09]);
+ }
+ for(const [x,z] of [[-26,-12],[26,-12],[-26,12],[26,12],[0,-26],[0,26]]){
+   box([x,2.8,z],[.16,5.6,.16],[.23,.29,.32]);box([x,5.62,z],[.65,.18,.65],[.36,.42,.43]);box([x,5.75,z],[.4,.12,.4],[.98,.35,.08]);
+ }
+ // Broken road lanes, drainage grates, arrows and tactical floor panels.
+ for(const z of [-9,3,21]){box([-1,-.005,z],[9,.018,.12],[.72,.43,.12]);box([1.2,-.004,z+1.2],[.12,.018,1.4],[.72,.43,.12]);}
+ for(const x of [-18,-6,6,18]){box([x,-.003,0],[1.4,.018,2.2],[.09,.13,.16]);for(let k=-2;k<=2;k++)box([x+k*.22,.008,0],[.035,.018,1.9],[.25,.31,.33]);}
 }
 
 const guns=[
@@ -155,7 +193,7 @@ let started=false,dead=false,lastTime=0,lastUi=0,elapsed=0,player={x:0,z:18,yaw:
 const keys={};
 function setWeapon(i){currentGun=(i+3)%3;document.querySelectorAll('.weaponbtn').forEach(b=>b.classList.toggle('selected',+b.dataset.weapon===currentGun));crosshair.classList.toggle('aim',aimHeld);updateUI();}
 function updateUI(){const g=guns[currentGun];waveEl.textContent=String(wave).padStart(2,'0');killsEl.textContent=String(kills).padStart(2,'0');enemyCountEl.textContent='HOSTILES '+String(enemies.length).padStart(2,'0');hpText.textContent=Math.max(0,Math.ceil(player.hp))+' / 100';hpBar.style.width=Math.max(0,player.hp)+'%';hpBar.style.background=player.hp<30?'linear-gradient(90deg,#ff4242,#ff9870)':'linear-gradient(90deg,#4af0a1,#d8ff79)';ammoNowEl.textContent=ammo[currentGun];ammoMaxEl.textContent=reserve[currentGun];weaponNameEl.textContent=g.id;reloadText.textContent=reloading?'RELOADING…':'';}
-function spawnWave(){const count=Math.min(5+(wave-1)*2,18);enemies=[];for(let i=0;i<count;i++){let a=(i/count)*Math.PI*2+(wave*.29),r=18+(i%3)*2;let x=Math.cos(a)*r,z=Math.sin(a)*r; if(Math.hypot(x-player.x,z-player.z)<12){x=-x;z=-z;}enemies.push({id:enemyId++,x,z,hp:55+wave*12,maxHp:55+wave*12,speed:1.05+Math.min(wave*.045,.7),cool:.6+Math.random()*1.2,hit:0});}updateUI();}
+function spawnWave(){const count=Math.min(7+(wave-1)*2,20);enemies=[];for(let i=0;i<count;i++){let a=(i/count)*Math.PI*2+(wave*.29),r=18+(i%3)*2;let x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.hypot(x-player.x,z-player.z)<12){x=-x;z=-z;}const heavy=(i%5===4),scout=(i%4===1);const hp=(heavy?92:scout?48:64)+wave*13;enemies.push({id:enemyId++,x,z,hp,maxHp:hp,speed:(heavy?.82:scout?1.62:1.18)+Math.min(wave*.05,.8),cool:.45+Math.random()*1.0,hit:0,role:heavy?'heavy':scout?'scout':'rifle',strafe:Math.random()<.5?-1:1});}updateUI();}
 function startGame(){started=true;dead=false;player={x:0,z:18,yaw:0,pitch:0,hp:100};kills=0;wave=1;ammo=guns.map(g=>g.mag);reserve=guns.map(g=>g.reserve);reloading=false;setWeapon(0);spawnWave();overlay.classList.add('hidden');hud.style.display='block';if(matchMedia('(pointer:coarse)').matches){controls.style.display='block';}else{controls.style.display='none';canvas.requestPointerLock?.();}lastTime=performance.now();}
 function gameOver(){dead=true;started=false;fireHeld=false;aimHeld=false;overlay.classList.remove('hidden');overlayDesc.innerHTML='戦闘終了。<b style="color:#54e7ff">'+kills+' TARGETS</b> を無力化し、WAVE '+String(wave).padStart(2,'0')+' まで到達。もう一度出撃して記録を更新しよう。';overlayHelp.innerHTML='<b>操作：</b>PCはWASD・マウス・左クリック・R。iPadは左スティック・右側スワイプ・FIRE。<br>武器はいつでも切替可能。遮蔽物を使い、敵の射線から外れよう。';startBtn.textContent='REDEPLOY / もう一度';hud.style.display='none';controls.style.display='none';document.exitPointerLock?.();}
 startBtn.addEventListener('click',startGame);
@@ -171,13 +209,40 @@ function shoot(now){if(!started||dead||reloading)return;const g=guns[currentGun]
 function damage(amount){if(!started)return;player.hp=Math.max(0,player.hp-amount);damageflash.style.opacity='.78';setTimeout(()=>damageflash.style.opacity='0',100);updateUI();if(player.hp<=0)gameOver();}
 function blocked(x,z){if(Math.abs(x)>27.1||Math.abs(z)>27.1)return true;for(const o of obstacles){if(Math.abs(x-o.x)<o.sx/2+.58&&Math.abs(z-o.z)<o.sz/2+.58)return true;}return false;}
 function movePlayer(dt){let fw=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0)-joy.y;let st=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0)+joy.x;const l=Math.hypot(fw,st);if(l>1){fw/=l;st/=l;}const speed=(keys.ShiftLeft||keys.ShiftRight)?8.2:5.7;const fx=Math.sin(player.yaw),fz=-Math.cos(player.yaw),rx=Math.cos(player.yaw),rz=Math.sin(player.yaw);const dx=(fx*fw+rx*st)*speed*dt,dz=(fz*fw+rz*st)*speed*dt;if(!blocked(player.x+dx,player.z))player.x+=dx;if(!blocked(player.x,player.z+dz))player.z+=dz;}
-function updateEnemies(dt,now){for(const e of enemies){const dx=player.x-e.x,dz=player.z-e.z,d=Math.hypot(dx,dz)||1;if(d>6.6){const nx=e.x+dx/d*e.speed*dt,nz=e.z+dz/d*e.speed*dt;if(!blocked(nx,nz)){e.x=nx;e.z=nz;}else{const sx=e.x+(-dz/d)*e.speed*dt,sz=e.z+(dx/d)*e.speed*dt;if(!blocked(sx,sz)){e.x=sx;e.z=sz;}}}e.cool-=dt;e.hit=Math.max(0,e.hit-dt);if(d<25&&e.cool<=0){e.cool=1.15+Math.random()*1.05;if(Math.random()<Math.min(.75,.24+wave*.035))damage(4+Math.min(wave,7));}}
- if(enemies.length===0&&started){wave++;player.hp=Math.min(100,player.hp+12);spawnWave();updateUI();}}
-function drawEnemy(e){const yaw=Math.atan2(player.x-e.x,-(player.z-e.z));const base=T(e.x,0,e.z);const group=mul(base,RY(yaw));const red=e.hit>0?[1,.9,.8]:[.55,.13,.105],dark=[.12,.16,.19],armor=[.26,.31,.34];
- localPart(group,cube,[0,1.15,0],[.68,.82,.38],red);localPart(group,cube,[0,1.62,0],[.48,.16,.4],armor);localPart(group,sphere,[0,1.82,0],[.34,.37,.31],dark);localPart(group,cube,[0,1.85,.17],[.22,.08,.035],[.95,.34,.12]);
- localPart(group,cube,[-.42,1.15,0],[.2,.72,.22],armor,0,0,-.13);localPart(group,cube,[.42,1.15,0],[.2,.72,.22],armor,0,0,.13);localPart(group,cube,[-.19,.48,0],[.24,.72,.25],dark);localPart(group,cube,[.19,.48,0],[.24,.72,.25],dark);
- // Floating health bar, with a dark backing.
- const barYaw=player.yaw;draw(cube,modelAt([e.x,2.28,e.z],[.86,.075,.07],barYaw),[.04,.06,.07]);const f=Math.max(0,e.hp/e.maxHp);if(f>.01)draw(cube,modelAt([e.x-(1-f)*.39,2.28,e.z],[.78*f,.045,.078],barYaw),[.16+.6*(1-f),.82*f,.25]);}
+function updateEnemies(dt,now){for(const e of enemies){const dx=player.x-e.x,dz=player.z-e.z,d=Math.hypot(dx,dz)||1;
+  // Scouts strafe to pressure the player; riflemen close in, heavy units hold a firing lane.
+  const strafe=(e.role==='scout'&&d<15)?e.strafe*.48:0;
+  const approach=e.role==='heavy'?(d>10?1:0):(d>(e.role==='scout'?8:7.2)?1:0);
+  const vx=(dx/d*approach+(-dz/d)*strafe)*e.speed*dt,vz=(dz/d*approach+(dx/d)*strafe)*e.speed*dt;
+  const nx=e.x+vx,nz=e.z+vz;if(!blocked(nx,nz)){e.x=nx;e.z=nz;}else{const sx=e.x+(-dz/d)*e.speed*dt,sz=e.z+(dx/d)*e.speed*dt;if(!blocked(sx,sz)){e.x=sx;e.z=sz;}else e.strafe*=-1;}
+  e.cool-=dt;e.hit=Math.max(0,e.hit-dt);if(d<29&&e.cool<=0){e.cool=(e.role==='heavy'?1.0:1.0)+Math.random()*.85;const chance=Math.min(.88,(e.role==='heavy'?.48:e.role==='scout'?.43:.36)+wave*.035);if(Math.random()<chance)damage((e.role==='heavy'?7:e.role==='scout'?4:5)+Math.min(wave,8));}}
+ if(enemies.length===0&&started){wave++;player.hp=Math.min(100,player.hp+16);spawnWave();updateUI();}}
+function drawEnemy(e){const yaw=Math.atan2(player.x-e.x,-(player.z-e.z));const base=T(e.x,0,e.z);const group=mul(base,RY(yaw));
+ const flash=e.hit>0,heavy=e.role==='heavy',scout=e.role==='scout';
+ const red=flash?[1,.9,.8]:heavy?[.38,.16,.12]:scout?[.12,.42,.4]:[.48,.12,.1],dark=[.09,.12,.15],armor=heavy?[.34,.29,.22]:scout?[.16,.34,.34]:[.25,.3,.33],metal=[.43,.5,.52];
+ // Torso with layered ballistic vest, chest plates and shoulder armor.
+ localPart(group,cube,[0,1.18,0],[.62, .78,.34],red);
+ localPart(group,cube,[0,1.22,.19],[.43,.48,.08],armor);
+ localPart(group,cube,[0,1.43,.235],[.28,.13,.045],metal);
+ for(const x of [-.13,.13])localPart(group,cube,[x,1.13,.238],[.1,.12,.04],dark);
+ localPart(group,cube,[0,1.58,0],[.54,.17,.39],armor);
+ localPart(group,cube,[-.36,1.53,0],[.25,.27,.32],armor,0,0,-.12);localPart(group,cube,[.36,1.53,0],[.25,.27,.32],armor,0,0,.12);
+ // Helmet, brow, face shield, side comms and rear pack.
+ localPart(group,sphere,[0,1.87,0],[.31,.31,.29],dark);
+ localPart(group,cube,[0,2.045,.015],[.49,.105,.34],armor);
+ localPart(group,cube,[0,1.91,.245],[.29,.1,.025],scout?[.2,.95,.75]:[.95,.29,.1]);
+ localPart(group,cube,[-.32,1.88,0],[.09,.16,.16],metal);localPart(group,cube,[.32,1.88,0],[.09,.16,.16],metal);
+ localPart(group,cube,[0,1.22,-.22],[.35,.5,.16],dark);
+ localPart(group,cube,[0,1.45,-.31],[.28,.12,.05],metal);
+ // Arms with elbow pads and gloves; legs with knee pads and boots.
+ for(const side of [-1,1]){localPart(group,cube,[side*.43,1.17,.02],[.17,.48,.2],armor,0,0,side*-.12);localPart(group,sphere,[side*.45,.91,.05],[.13,.13,.13],dark);localPart(group,cube,[side*.45,.77,.12],[.15,.22,.15],dark);localPart(group,cube,[side*.19,.48,0],[.2,.57,.22],dark);localPart(group,cube,[side*.19,.22,.08],[.23,.18,.34],metal);localPart(group,cube,[side*.19,.53,.125],[.16,.13,.035],armor);}
+ // A compact rifle held across the chest makes the silhouette read as an armed combatant.
+ localPart(group,cube,[.19,1.08,.31],[.12,.13,.55],dark,0,0,-.18);
+ localPart(group,cube,[.19,1.15,.53],[.075,.07,.42],metal,0,0,-.18);
+ localPart(group,cube,[.19,.96,.3],[.1,.2,.14],armor,0,0,-.18);
+ if(heavy){localPart(group,cube,[0,1.72,-.04],[.66,.2,.44],[.28,.31,.32]);localPart(group,cube,[0,1.72,.2],[.42,.06,.04],[.95,.28,.08]);}
+ // Floating health bar and role marker.
+ const barYaw=player.yaw;draw(cube,modelAt([e.x,2.35,e.z],[.94,.075,.07],barYaw),[.025,.035,.045]);const f=Math.max(0,e.hp/e.maxHp);if(f>.01)draw(cube,modelAt([e.x-(1-f)*.43,2.35,e.z],[.86*f,.045,.078],barYaw),heavy?[.98,.44,.12]:scout?[.12,.92,.75]:[.18+.65*(1-f),.82*f,.25]);}
 function drawGun(now){const g=guns[currentGun],eye=camEye(),dir=viewDir(),right=[Math.cos(player.yaw),0,Math.sin(player.yaw)],up=[-Math.sin(player.pitch)*Math.sin(player.yaw),Math.cos(player.pitch),Math.sin(player.pitch)*Math.cos(player.yaw)];const pos=[eye[0]+right[0]*.34+up[0]*(-.28)+dir[0]*(.64-recoil),eye[1]+right[1]*.34+up[1]*(-.28)+dir[1]*(.64-recoil),eye[2]+right[2]*.34+up[2]*(-.28)+dir[2]*(.64-recoil)];let base=mul(T(...pos),RY(Math.PI-player.yaw));base=mul(base,RX(-player.pitch));
  const body=currentGun===0?[.12,.15,.17]:currentGun===1?[.21,.17,.13]:[.14,.17,.2],metal=[.42,.49,.52],accent=[.95,.39,.13];
  localPart(base,cube,[0,0,0],[.22,.19,currentGun===2?.62:.43],body);localPart(base,cube,[0,-.13,-.1],[.15,.1,.25],[.22,.25,.27]);localPart(base,cube,[0,.12,-.045],[.12,.035,.35],metal);
