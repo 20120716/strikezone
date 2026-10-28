@@ -65,6 +65,7 @@ async function connect(code, asHost = false) {
     if (unsubscribe) unsubscribe();
     await set(playerRef, { uid, x:lastState.x, z:lastState.z, yaw:lastState.yaw, hp:lastState.hp, alive:lastState.alive, kills:lastState.kills, host:isRoomHost, mode:matchMode, team:teamFor(uid, matchMode), updatedAt:serverTimestamp() });
     await onDisconnect(playerRef).remove();
+    window.dispatchEvent(new CustomEvent("strikezone:connected", { detail: { roomCode, mode: matchMode, host: isRoomHost } }));
     unsubscribe = onValue(ref(db, `rooms/${roomCode}/players`), snap => {
       const players = snap.val() || {};
       const list = Object.values(players).filter(p => p && typeof p.x === "number" && typeof p.z === "number");
