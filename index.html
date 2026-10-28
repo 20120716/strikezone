@@ -207,7 +207,7 @@ function updateEnemies(dt,now){for(const e of enemies){const dx=player.x-e.x,dz=
   const strafe=(e.role==='scout'&&d<15)?e.strafe*.48:0;
   const approach=e.role==='heavy'?(d>10?1:0):(d>(e.role==='scout'?8:7.2)?1:0);
   const vx=(dx/d*approach+(-dz/d)*strafe)*e.speed*dt,vz=(dz/d*approach+(dx/d)*strafe)*e.speed*dt;
-  const nx=e.x+vx,nz=e.z+vz;if(!blocked(nx,nz)){e.x=nx;e.z=nz;}else{const sx=e.x+(-dz/d)*e.speed*dt,sz=e.z+(dx/d)*e.speed*dt;if(!blocked(sx,sz)){e.x=sx;e.z=sz;}else e.strafe*=-1;}
+  const nx=e.x+vx,nz=e.z+vz;e.vx=(nx-e.x)/Math.max(dt,.001);e.vz=(nz-e.z)/Math.max(dt,.001);if(!blocked(nx,nz)){e.x=nx;e.z=nz;}else{const sx=e.x+(-dz/d)*e.speed*dt,sz=e.z+(dx/d)*e.speed*dt;if(!blocked(sx,sz)){e.vx=(sx-e.x)/Math.max(dt,.001);e.vz=(sz-e.z)/Math.max(dt,.001);e.x=sx;e.z=sz;}else{e.vx=0;e.vz=0;e.strafe*=-1;}}
   e.cool-=dt;e.hit=Math.max(0,e.hit-dt);if(d<29&&e.cool<=0){
     // Enemies must have a clear line of sight before they can damage the player.
     const eye=[e.x,1.62,e.z],target=[player.x,1.15,player.z],delta=sub(target,eye),dist=Math.hypot(delta[0],delta[1],delta[2]),dir=norm(delta);
@@ -217,7 +217,7 @@ function updateEnemies(dt,now){for(const e of enemies){const dx=player.x-e.x,dz=
   }}
  if(enemies.length===0&&started){wave++;player.hp=Math.min(100,player.hp+16);spawnWave();updateUI();}}
 function drawRemotePlayer(p){const group=mul(T(p.x,0,p.z),RY(Math.PI-(p.yaw||0)));const suit=[.12,.42,.98],dark=[.045,.09,.2],accent=[.2,.92,1];localPart(group,cube,[0,1.18,0],[.62,.78,.34],suit);localPart(group,cube,[0,1.22,.19],[.43,.48,.08],dark);localPart(group,cube,[0,1.43,.235],[.28,.13,.045],accent);localPart(group,sphere,[0,1.87,0],[.31,.31,.29],dark);localPart(group,cube,[0,2.045,.015],[.49,.105,.34],suit);localPart(group,cube,[0,1.91,.245],[.29,.1,.025],accent);for(const side of [-1,1]){localPart(group,cube,[side*.43,1.17,.02],[.17,.48,.2],suit,0,0,side*-.12);localPart(group,cube,[side*.19,.48,0],[.2,.57,.22],dark);localPart(group,cube,[side*.19,.22,.08],[.23,.18,.34],dark);}draw(cube,modelAt([p.x,2.35,p.z],[1.0,.075,.07],player.yaw),[.03,.08,.12]);draw(cube,modelAt([p.x,2.35,p.z],[.9,.045,.078],player.yaw),[.12,.92,1]);}
-function drawEnemy(e){const yaw=Math.atan2(player.x-e.x,-(player.z-e.z));const base=T(e.x,0,e.z);const group=mul(base,RY(yaw));
+function drawEnemy(e,now){const yaw=Math.atan2(player.x-e.x,player.z-e.z);const gait=Math.sin(now*.009+e.id*1.7)*Math.min(1,Math.hypot(e.vx||0,e.vz||0)*2.5);const base=T(e.x,0,e.z);const group=mul(base,RY(yaw));
  const flash=e.hit>0,heavy=e.role==='heavy',scout=e.role==='scout';
  const red=flash?[1,.9,.8]:heavy?[.38,.16,.12]:scout?[.12,.42,.4]:[.48,.12,.1],dark=[.09,.12,.15],armor=heavy?[.34,.29,.22]:scout?[.16,.34,.34]:[.25,.3,.33],metal=[.43,.5,.52];
  // Torso with layered ballistic vest, chest plates and shoulder armor.
@@ -234,7 +234,7 @@ function drawEnemy(e){const yaw=Math.atan2(player.x-e.x,-(player.z-e.z));const b
  localPart(group,cube,[0,1.22,-.22],[.35,.5,.16],dark);
  localPart(group,cube,[0,1.45,-.31],[.28,.12,.05],metal);
  // Arms with elbow pads and gloves; legs with knee pads and boots.
- for(const side of [-1,1]){localPart(group,cube,[side*.43,1.17,.02],[.17,.48,.2],armor,0,0,side*-.12);localPart(group,sphere,[side*.45,.91,.05],[.13,.13,.13],dark);localPart(group,cube,[side*.45,.77,.12],[.15,.22,.15],dark);localPart(group,cube,[side*.19,.48,0],[.2,.57,.22],dark);localPart(group,cube,[side*.19,.22,.08],[.23,.18,.34],metal);localPart(group,cube,[side*.19,.53,.125],[.16,.13,.035],armor);}
+ for(const side of [-1,1]){localPart(group,cube,[side*.43,1.17,.02],[.17,.48,.2],armor,0,0,side*-.12+gait*side*.32);localPart(group,sphere,[side*.45,.91,.05],[.13,.13,.13],dark);localPart(group,cube,[side*.45,.77,.12],[.15,.22,.15],dark,0,0,gait*side*.32);localPart(group,cube,[side*.19,.48,0],[.2,.57,.22],dark,0,0,-gait*side*.55);localPart(group,cube,[side*.19,.22,.08],[.23,.18,.34],metal,0,0,-gait*side*.55);localPart(group,cube,[side*.19,.53,.125],[.16,.13,.035],armor,0,0,-gait*side*.55);}
  // A compact rifle held across the chest makes the silhouette read as an armed combatant.
  localPart(group,cube,[.19,1.08,.31],[.12,.13,.55],dark,0,0,-.18);
  localPart(group,cube,[.19,1.15,.53],[.075,.07,.42],metal,0,0,-.18); localPart(group,cube,[.19,.96,.3],[.1,.2,.14],armor,0,0,-.18);
@@ -255,7 +255,7 @@ function drawGun(now){const g=guns[currentGun],eye=camEye(),dir=viewDir(),right=
 const darken=(c,k)=>c.map(x=>x*k);
 function resize(){const dpr=Math.min(window.devicePixelRatio||1,1.55);const w=Math.floor(innerWidth*dpr),h=Math.floor(innerHeight*dpr);if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;gl.viewport(0,0,w,h);}}
 function render(now){resize();gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);const aspect=canvas.width/Math.max(1,canvas.height),fov=aimHeld?(currentGun===2?34:48):76;const eye=camEye(),dir=viewDir(),target=[eye[0]+dir[0],eye[1]+dir[1],eye[2]+dir[2]];const vp=mul(perspective(fov*Math.PI/180,aspect,.08,100),lookAt(eye,target,[0,1,0]));gl.uniformMatrix4fv(loc.vp,false,vp);
- drawArena();for(const p of (window.STRIKEZONE_REMOTE_PLAYERS||[]))drawRemotePlayer(p);for(const e of enemies)drawEnemy(e);if(started)drawGun(now);
+ drawArena();for(const p of (window.STRIKEZONE_REMOTE_PLAYERS||[]))drawRemotePlayer(p);for(const e of enemies)drawEnemy(e,now);if(started)drawGun(now);
 }
 function frame(now){const dt=Math.min(.034,(now-(lastTime||now))/1000||0);lastTime=now;if(started){elapsed+=dt;movePlayer(dt);updateEnemies(dt,now);if(fireHeld)shoot(now);if(reloading&&now>=reloadEnd){const g=guns[currentGun],need=g.mag-ammo[currentGun],take=Math.min(need,reserve[currentGun]);ammo[currentGun]+=take;reserve[currentGun]-=take;reloading=false;updateUI();}recoil=Math.max(0,recoil-dt*.75);if(now-lastUi>130){updateUI();lastUi=now;}if(now-(window.__szLastOnlineState||0)>100){window.__szLastOnlineState=now;window.dispatchEvent(new CustomEvent("strikezone:state",{detail:{x:player.x,z:player.z,yaw:player.yaw,hp:player.hp,alive:started&&!dead,kills}}));}}
  render(now);requestAnimationFrame(frame);}
