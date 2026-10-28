@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#080e16">
+<title>STRIKEZONE — 3D FPS</title>
+<style>
+:root{color-scheme:dark;--cyan:#54e7ff;--orange:#ff9d52;--panel:rgba(7,14,23,.78)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080e16;color:#fff;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;touch-action:none}
+#game{display:block;width:100%;height:100%;touch-action:none;outline:none}
+#vignette{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 42%,rgba(0,0,0,.48) 100%);z-index:2}
+#hud{position:absolute;inset:0;pointer-events:none;z-index:4;display:none;text-shadow:0 2px 8px #000}
+.topbar{position:absolute;top:max(14px,env(safe-area-inset-top));left:16px;right:16px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.brand{font-size:11px;letter-spacing:.22em;color:var(--cyan);font-weight:900}.wavebox{text-align:center;background:var(--panel);border:1px solid #6ceaff50;padding:7px 14px;min-width:95px;clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px)}
+#wave{font-size:19px;font-weight:900;line-height:1.1}.sub{font-size:9px;letter-spacing:.17em;color:#a9c0d0}.healthbox{width:min(220px,35vw);background:var(--panel);border:1px solid #ffffff30;padding:8px 10px}.healthline{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.12em;margin-bottom:6px}.meter{height:6px;background:#26313e;overflow:hidden}.meter span{display:block;height:100%;width:100%;background:linear-gradient(90deg,#4af0a1,#d8ff79);transition:width .12s}
+.bottomleft{position:absolute;left:17px;bottom:max(18px,env(safe-area-inset-bottom));background:var(--panel);border:1px solid #ffffff25;padding:9px 12px;font-size:10px;letter-spacing:.1em}.bottomleft b{color:var(--cyan);font-size:15px;margin-right:7px}
+.weaponhud{position:absolute;right:18px;bottom:max(17px,env(safe-area-inset-bottom));text-align:right;background:var(--panel);border:1px solid #ffffff30;padding:10px 14px;min-width:138px}.weaponname{font-size:11px;letter-spacing:.19em;color:var(--cyan);font-weight:900}.ammo{font-size:27px;font-weight:900;line-height:1.2}.ammo small{font-size:13px;color:#91a5b8}.reloadtxt{font-size:9px;letter-spacing:.16em;color:var(--orange);height:12px}
+#crosshair{position:absolute;left:50%;top:50%;width:22px;height:22px;transform:translate(-50%,-50%);transition:transform .07s;filter:drop-shadow(0 0 2px #000)}#crosshair:before,#crosshair:after{content:"";position:absolute;background:#e9fbff;border-radius:2px}#crosshair:before{width:2px;height:22px;left:10px;top:0}#crosshair:after{height:2px;width:22px;top:10px;left:0}#crosshair.aim{transform:translate(-50%,-50%) scale(.55)}#hitmarker{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:34px;font-weight:300;opacity:0;color:#fff}#hitmarker.show{opacity:1}
+#damageflash{position:absolute;inset:0;opacity:0;background:radial-gradient(ellipse,transparent 30%,rgba(255,40,40,.62));transition:opacity .12s}
+#controls{position:absolute;inset:0;z-index:5;display:none;pointer-events:none}.control{pointer-events:auto;touch-action:none}
+#stickBase{position:absolute;left:max(20px,env(safe-area-inset-left));bottom:max(26px,env(safe-area-inset-bottom));width:118px;height:118px;border-radius:50%;border:1px solid #c9f6ff70;background:#b7e9ff12;box-shadow:inset 0 0 25px #52dfff12}
+#stickNub{position:absolute;left:50%;top:50%;width:51px;height:51px;transform:translate(-50%,-50%);border-radius:50%;border:1px solid #baf7ffb0;background:linear-gradient(145deg,#b2f7ff66,#2aa8d755);box-shadow:0 0 16px #36dfff35}
+#lookHint{position:absolute;left:43%;right:22%;top:28%;bottom:27%;border:1px dashed #d6faff12;border-radius:30px;opacity:.28;display:none}
+#touchActions{position:absolute;right:max(17px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));display:flex;align-items:flex-end;gap:10px}
+#fireBtn{width:83px;height:83px;border-radius:50%;font-weight:900;font-size:12px;letter-spacing:.1em;border:2px solid #ffbb80;background:radial-gradient(circle at 35% 25%,#ffb76e99,#d94a2977);box-shadow:0 0 24px #ff713a26;color:white}
+#actionCol{display:flex;flex-direction:column;gap:8px;margin-bottom:2px}.touchbtn{border:1px solid #c6f8ff75;background:#07131fd9;color:#eefcff;border-radius:10px;padding:10px 12px;min-width:62px;font-size:10px;font-weight:900;letter-spacing:.09em}.touchbtn.active{background:#1b7385;color:white;border-color:var(--cyan)}
+#weaponBtns{position:absolute;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:5px;pointer-events:auto}.weaponbtn{background:#08121de8;border:1px solid #c0d7e055;color:#d9e8f1;padding:9px 11px;font-size:10px;font-weight:800;letter-spacing:.04em;border-radius:7px;white-space:nowrap}.weaponbtn.selected{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 14px #4ce5ff18}
+#overlay{position:absolute;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;padding:22px;background:linear-gradient(110deg,rgba(3,8,15,.94),rgba(6,18,30,.71)),radial-gradient(ellipse at 75% 30%,#1a536a66,transparent 45%)}
+.panel{width:min(660px,100%);border:1px solid #a7efff4a;background:rgba(4,10,18,.77);padding:clamp(20px,5vw,42px);box-shadow:0 18px 80px #0009;position:relative;overflow:hidden}.panel:after{content:"";position:absolute;right:-70px;top:-80px;width:220px;height:220px;border:1px solid #57eaff2c;transform:rotate(35deg);pointer-events:none}.eyebrow{font-size:11px;letter-spacing:.28em;color:var(--cyan);font-weight:900}.title{font-size:clamp(35px,7vw,68px);font-weight:1000;line-height:.95;letter-spacing:-.055em;margin:13px 0 11px}.title em{font-style:normal;color:var(--cyan)}.desc{color:#c1ced8;font-size:13px;line-height:1.8;max-width:510px}.guns{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:22px 0}.gun{border:1px solid #ffffff25;background:#ffffff07;padding:10px}.gun strong{display:block;font-size:11px;letter-spacing:.1em;color:#edfaff}.gun span{display:block;margin-top:4px;font-size:10px;color:#96a9b8;line-height:1.5}.startbtn{appearance:none;width:100%;padding:15px;border:1px solid #9df4ff;background:linear-gradient(90deg,#1d8998,#14556e);color:white;font-weight:1000;letter-spacing:.2em;font-size:13px;cursor:pointer;box-shadow:0 0 24px #47e4ff20}.help{font-size:10px;color:#92a4b4;line-height:1.7;margin-top:14px}.hidden{display:none!important}
+@media (pointer:coarse){#controls{display:block}#lookHint{display:block}#bottomHelp{display:none}.bottomleft{bottom:calc(max(18px,env(safe-area-inset-bottom)) + 120px);font-size:9px}.weaponhud{bottom:calc(max(17px,env(safe-area-inset-bottom)) + 72px);right:15px;min-width:125px}.weaponbtn{padding:9px 8px;font-size:9px}.topbar{left:10px;right:10px}.brand{font-size:9px}.healthbox{width:31vw}.healthline{font-size:9px}}
+@media (max-width:600px){.guns{gap:5px}.gun{padding:8px 6px}.gun strong{font-size:10px}.gun span{font-size:9px}.healthbox{width:29vw}.wavebox{min-width:75px;padding:7px 9px}#stickBase{width:100px;height:100px}#stickNub{width:45px;height:45px}#fireBtn{width:72px;height:72px}#touchActions{gap:7px}.touchbtn{padding:9px 9px;min-width:53px}}
+@media (orientation:portrait) and (pointer:coarse){.panel{max-width:500px}.desc{font-size:12px}.title{font-size:42px}.topbar{gap:5px}.brand{max-width:70px}.healthbox{width:28vw}.weaponhud{bottom:190px}.bottomleft{bottom:190px}#weaponBtns{bottom:135px}}
+</style>
+</head>
+<body>
+<canvas id="game" aria-label="STRIKEZONE 3D FPS"></canvas>
+<div id="vignette"></div>
+<div id="hud">
+  <div class="topbar">
+    <div><div class="brand">STRIKEZONE <span style="color:#8da3b4">/ TRAINING</span></div><div class="sub" style="margin-top:5px">TACTICAL COMBAT SIMULATION</div></div>
+    <div class="wavebox"><div class="sub">WAVE</div><div id="wave">01</div></div>
+    <div class="healthbox"><div class="healthline"><span>VITALS</span><b id="hpText">100 / 100</b></div><div class="meter"><span id="hpBar"></span></div></div>
+  </div>
+  <div id="crosshair"></div><div id="hitmarker">×</div><div id="damageflash"></div>
+  <div class="bottomleft"><b id="kills">00</b> TARGETS NEUTRALIZED <span id="enemyCount" style="color:#9fb1bf;margin-left:7px">HOSTILES 05</span><div id="bottomHelp" class="sub" style="margin-top:5px">WASD MOVE · MOUSE AIM · R RELOAD</div></div>
+  <div class="weaponhud"><div class="weaponname" id="weaponName">VECTOR / SMG</div><div class="ammo"><span id="ammoNow">30</span> <small>/ <span id="ammoMax">120</span></small></div><div class="reloadtxt" id="reloadText"></div></div>
+</div>
+<div id="controls">
+  <div id="lookHint"></div>
+  <div id="stickBase" class="control" aria-label="移動スティック"><div id="stickNub"></div></div>
+  <div id="touchActions">
+    <div id="actionCol"><button id="aimBtn" class="touchbtn control">AIM</button><button id="reloadBtn" class="touchbtn control">RELOAD</button></div>
+    <button id="fireBtn" class="control">FIRE</button>
+  </div>
+  <div id="weaponBtns"><button class="weaponbtn selected control" data-weapon="0">1 · SMG</button><button class="weaponbtn control" data-weapon="1">2 · 12GA</button><button class="weaponbtn control" data-weapon="2">3 · SNIPE</button></div>
+</div>
+<div id="overlay">
+  <div class="panel">
+    <div class="eyebrow">FIRST-PERSON COMBAT / 3D WEB GAME</div>
+    <h1 class="title">STRIKE<em>ZONE</em></h1>
+    <div id="overlayDesc" class="desc">低ポリゴンの3D訓練エリアで、敵のウェーブを突破しよう。遮蔽物を使い、3種類の武器を切り替えて戦うFPS。</div>
+    <div class="guns">
+      <div class="gun"><strong>01 / VECTOR</strong><span>SMG<br>高連射・扱いやすい</span></div>
+      <div class="gun"><strong>02 / BREACH</strong><span>SHOTGUN<br>近距離・6ペレット</span></div>
+      <div class="gun"><strong>03 / LONGSHOT</strong><span>SNIPER<br>高威力・長射程</span></div>
+    </div>
+    <button id="startBtn" class="startbtn">DEPLOY / ゲーム開始</button>
+    <div id="overlayHelp" class="help"><b>PC：</b>WASD 移動 / マウス 視点 / 左クリック 射撃 / 右クリック ADS / 1・2・3 武器切替 / R リロード<br><b>iPad：</b>左スティック 移動 / 右側スワイプ 視点 / FIRE 射撃 / AIM 照準<br>Safariは横画面推奨。外部ライブラリ・画像素材なしで動作します（JavaScript有効が必要）。</div>
+  </div>
+</div>
+<script>
+(() => {
+'use strict';
+const canvas = document.getElementById('game');
+const gl = canvas.getContext('webgl', {alpha:false, antialias:true, powerPreference:'high-performance'});
+const overlay = document.getElementById('overlay');
+const startBtn = document.getElementById('startBtn');
+const overlayDesc = document.getElementById('overlayDesc');
+const overlayHelp = document.getElementById('overlayHelp');
+if (!gl) { overlayDesc.textContent = 'このブラウザではWebGLを利用できません。Safariの設定でJavaScriptとWebGLが有効になっているか確認してください。'; startBtn.textContent='WEBGL NOT AVAILABLE'; startBtn.disabled=true; return; }
+const $ = id => document.getElementById(id);
+const hud = $('hud'), controls = $('controls');
+const hpText=$('hpText'), hpBar=$('hpBar'), waveEl=$('wave'), killsEl=$('kills'), enemyCountEl=$('enemyCount');
+const ammoNowEl=$('ammoNow'), ammoMaxEl=$('ammoMax'), weaponNameEl=$('weaponName'), reloadText=$('reloadText');
+const crosshair=$('crosshair'), hitmarker=$('hitmarker'), damageflash=$('damageflash');
+
+const vert = `attribute vec3 aPosition; attribute vec3 aNormal; uniform mat4 uVP; uniform mat4 uModel; varying vec3 vNormal; varying vec3 vWorld; void main(){ vec4 world=uModel*vec4(aPosition,1.0); vWorld=world.xyz; vNormal=normalize(mat3(uModel)*aNormal); gl_Position=uVP*world; }`;
+const frag = `precision mediump float; uniform vec3 uColor; uniform vec3 uLight; varying vec3 vNormal; varying vec3 vWorld; void main(){ vec3 n=normalize(vNormal); float d=max(dot(n,normalize(uLight)),0.0); float shade=0.43+0.57*d; float fog=smoothstep(34.0,62.0,length(vWorld.xz)); vec3 col=uColor*shade; col=mix(col,vec3(0.055,0.085,0.115),fog*0.78); gl_FragColor=vec4(col,1.0); }`;
+function shader(type,src){const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s;}
+const program=gl.createProgram();gl.attachShader(program,shader(gl.VERTEX_SHADER,vert));gl.attachShader(program,shader(gl.FRAGMENT_SHADER,frag));gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(program));gl.useProgram(program);
+const loc={pos:gl.getAttribLocation(program,'aPosition'),normal:gl.getAttribLocation(program,'aNormal'),vp:gl.getUniformLocation(program,'uVP'),model:gl.getUniformLocation(program,'uModel'),color:gl.getUniformLocation(program,'uColor'),light:gl.getUniformLocation(program,'uLight')};
+gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.disable(gl.CULL_FACE);gl.clearColor(.045,.075,.105,1);gl.uniform3f(loc.light,-.35,.88,.32);
+
+function mesh(data){const v=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,v);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(data),gl.STATIC_DRAW);return {buffer:v,count:data.length/6};}
+function cubeMesh(){const d=[];const faces=[
+  [[0,0,1],[[-.5,-.5,.5],[.5,-.5,.5],[.5,.5,.5],[-.5,.5,.5]]],[[0,0,-1],[[.5,-.5,-.5],[-.5,-.5,-.5],[-.5,.5,-.5],[.5,.5,-.5]]],
+  [[1,0,0],[[.5,-.5,.5],[.5,-.5,-.5],[.5,.5,-.5],[.5,.5,.5]]],[[-1,0,0],[[-.5,-.5,-.5],[-.5,-.5,.5],[-.5,.5,.5],[-.5,.5,-.5]]],
+  [[0,1,0],[[-.5,.5,.5],[.5,.5,.5],[.5,.5,-.5],[-.5,.5,-.5]]],[[0,-1,0],[[-.5,-.5,-.5],[.5,-.5,-.5],[.5,-.5,.5],[-.5,-.5,.5]]]
+ ]; for(const [n,p] of faces){for(const i of [0,1,2,0,2,3])d.push(...p[i],...n);}return mesh(d);}
+function sphereMesh(){const d=[],rings=9,segs=12;for(let y=0;y<rings;y++){const a0=Math.PI*y/rings,a1=Math.PI*(y+1)/rings;for(let x=0;x<segs;x++){const b0=2*Math.PI*x/segs,b1=2*Math.PI*(x+1)/segs;const pts=[[Math.sin(a0)*Math.cos(b0),Math.cos(a0),Math.sin(a0)*Math.sin(b0)],[Math.sin(a1)*Math.cos(b0),Math.cos(a1),Math.sin(a1)*Math.sin(b0)],[Math.sin(a1)*Math.cos(b1),Math.cos(a1),Math.sin(a1)*Math.sin(b1)],[Math.sin(a0)*Math.cos(b1),Math.cos(a0),Math.sin(a0)*Math.sin(b1)]];for(const i of [0,1,2,0,2,3])d.push(...pts[i],...pts[i]);}}return mesh(d);}
+function cylinderMesh(){const d=[],n=12;for(let i=0;i<n;i++){const a=i*2*Math.PI/n,b=(i+1)*2*Math.PI/n;const p0=[Math.cos(a)*.5,-.5,Math.sin(a)*.5],p1=[Math.cos(b)*.5,-.5,Math.sin(b)*.5],p2=[Math.cos(b)*.5,.5,Math.sin(b)*.5],p3=[Math.cos(a)*.5,.5,Math.sin(a)*.5];const n0=[Math.cos(a),0,Math.sin(a)],n1=[Math.cos(b),0,Math.sin(b)];for(const [p,nm] of [[p0,n0],[p1,n1],[p2,n1],[p0,n0],[p2,n1],[p3,n0]])d.push(...p,...nm);d.push(0,.5,0,0,1,0,...p3,0,1,0,...p2,0,1,0,0,-.5,0,0,-1,0,...p1,0,-1,0,...p0,0,-1,0);}return mesh(d);}
+const cube=cubeMesh(),sphere=sphereMesh(),cylinder=cylinderMesh();
+const I=()=>new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]);
+function mul(a,b){const o=new Float32Array(16);for(let c=0;c<4;c++)for(let r=0;r<4;r++)o[c*4+r]=a[r]*b[c*4]+a[4+r]*b[c*4+1]+a[8+r]*b[c*4+2]+a[12+r]*b[c*4+3];return o;}
+function T(x,y,z){const m=I();m[12]=x;m[13]=y;m[14]=z;return m;}
+function S(x,y,z){const m=I();m[0]=x;m[5]=y;m[10]=z;return m;}
+function RX(a){const c=Math.cos(a),s=Math.sin(a);return new Float32Array([1,0,0,0,0,c,s,0,0,-s,c,0,0,0,0,1]);}
+function RY(a){const c=Math.cos(a),s=Math.sin(a);return new Float32Array([c,0,-s,0,0,1,0,0,s,0,c,0,0,0,0,1]);}
+function RZ(a){const c=Math.cos(a),s=Math.sin(a);return new Float32Array([c,s,0,0,-s,c,0,0,0,0,1,0,0,0,0,1]);}
+function norm(v){const l=Math.hypot(v[0],v[1],v[2])||1;return [v[0]/l,v[1]/l,v[2]/l];}
+function dot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
+function sub(a,b){return [a[0]-b[0],a[1]-b[1],a[2]-b[2]];}
+function cross(a,b){return [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
+function perspective(fovy,aspect,near,far){const f=1/Math.tan(fovy/2),nf=1/(near-far);return new Float32Array([f/aspect,0,0,0,0,f,0,0,0,0,(far+near)*nf,-1,0,0,2*far*near*nf,0]);}
+function lookAt(eye,center,up){const z=norm(sub(eye,center)),x=norm(cross(up,z)),y=cross(z,x);return new Float32Array([x[0],y[0],z[0],0,x[1],y[1],z[1],0,x[2],y[2],z[2],0,-dot(x,eye),-dot(y,eye),-dot(z,eye),1]);}
+function draw(msh,model,color){gl.bindBuffer(gl.ARRAY_BUFFER,msh.buffer);gl.enableVertexAttribArray(loc.pos);gl.vertexAttribPointer(loc.pos,3,gl.FLOAT,false,24,0);gl.enableVertexAttribArray(loc.normal);gl.vertexAttribPointer(loc.normal,3,gl.FLOAT,false,24,12);gl.uniformMatrix4fv(loc.model,false,model);gl.uniform3f(loc.color,color[0],color[1],color[2]);gl.drawArrays(gl.TRIANGLES,0,msh.count);}
+function modelAt(pos,scale,rotY=0,rotX=0,rotZ=0){let m=T(pos[0],pos[1],pos[2]);m=mul(m,RY(rotY));m=mul(m,RX(rotX));m=mul(m,RZ(rotZ));return mul(m,S(scale[0],scale[1],scale[2]));}
+function localPart(group,meshType,local,scale,color,rx=0,ry=0,rz=0){let m=mul(group,T(local[0],local[1],local[2]));m=mul(m,RY(ry));m=mul(m,RX(rx));m=mul(m,RZ(rz));m=mul(m,S(scale[0],scale[1],scale[2]));draw(meshType,m,color);}
+function box(pos,scale,color,rotY=0){draw(cube,modelAt(pos,scale,rotY),color);}
+
+// Original, procedural 3D training arena — no external model or texture files.
+const obstacles=[
+ {x:-10,z:-7,sx:4,sz:2,sy:2.3,c:[.24,.33,.39]},{x:-4,z:-12,sx:2.2,sz:2.2,sy:1.4,c:[.33,.38,.4]},
+ {x:8,z:-8,sx:5,sz:2,sy:2.1,c:[.24,.34,.39]},{x:14,z:-2,sx:2,sz:4,sy:1.7,c:[.3,.35,.39]},
+ {x:-13,z:6,sx:2.5,sz:4,sy:1.9,c:[.29,.34,.37]},{x:-5,z:10,sx:5,sz:2,sy:2.2,c:[.23,.32,.37]},
+ {x:5,z:8,sx:3,sz:3,sy:1.6,c:[.31,.36,.39]},{x:13,z:12,sx:4,sz:2,sy:2.2,c:[.24,.32,.37]},
+ {x:1,z:-1,sx:2,sz:2,sy:1.1,c:[.36,.4,.4]},{x:20,z:7,sx:2,sz:5,sy:1.8,c:[.29,.34,.37]},
+ {x:-20,z:-8,sx:2,sz:5,sy:1.6,c:[.29,.34,.37]}
+];
+function drawArena(){
+ box([0,-.42,0],[60,.8,60],[.13,.17,.2]);
+ // Concrete seams and painted tactical lane markings.
+ for(let i=-25;i<=25;i+=5){box([i,-.006,0],[.035,.012,58],[.19,.235,.26]);box([0,-.004,i],[58,.012,.035],[.19,.235,.26]);}
+ for(let z=-24;z<=24;z+=12){box([0,.006,z],[.18,.015,1.7],[.76,.48,.16]);box([0,.006,z+2.1],[.18,.015,1.7],[.76,.48,.16]);}
+ box([0,2.45,-29.5],[60,5.4,1],[.17,.23,.28]);box([0,2.45,29.5],[60,5.4,1],[.17,.23,.28]);box([-29.5,2.45,0],[1,5.4,60],[.17,.23,.28]);box([29.5,2.45,0],[1,5.4,60],[.17,.23,.28]);
+ // Panels and high-contrast wall ribs.
+ for(let x=-25;x<=25;x+=5){box([x,2.45,-28.96],[.09,4.5,.08],[.28,.39,.43]);box([x,2.45,28.96],[.09,4.5,.08],[.28,.39,.43]);}
+ for(let z=-25;z<=25;z+=5){box([-28.96,2.45,z],[.08,4.5,.09],[.28,.39,.43]);box([28.96,2.45,z],[.08,4.5,.09],[.28,.39,.43]);}
+ for(const o of obstacles){box([o.x,o.sy/2-.02,o.z],[o.sx,o.sy,o.sz],o.c);box([o.x,o.sy-.01,o.z],[o.sx+.04,.07,o.sz+.04],[.57,.62,.62]);
+   // small amber ID strips on crate faces
+   box([o.x,o.sy*.57,o.z+o.sz/2+.008],[Math.min(1.0,o.sx*.45),.09,.018],[.95,.39,.12]);}
+ // Tall signal pylons give the arena scale and depth cues.
+ for(const [x,z] of [[-24,-21],[24,-21],[-24,21],[24,21]]){box([x,1.6,z],[.8,3.2,.8],[.14,.25,.31]);box([x,3.25,z],[1,.16,1],[.9,.28,.1]);}
+}
+
+const guns=[
+ {id:'VECTOR / SMG',short:'SMG',mag:30,reserve:150,rate:95,damage:14,pellets:1,spread:.034,range:42,reload:1.28},
+ {id:'BREACH / 12GA',short:'12GA',mag:8,reserve:48,rate:680,damage:12,pellets:7,spread:.105,range:18,reload:1.65},
+ {id:'LONGSHOT / SR',short:'SNIPE',mag:5,reserve:35,rate:820,damage:95,pellets:1,spread:.003,range:72,reload:1.85}
+];
+let currentGun=0, ammo=guns.map(g=>g.mag), reserve=guns.map(g=>g.reserve), reloading=false,reloadEnd=0,nextShot=0,fireHeld=false,aimHeld=false,recoil=0,muzzleUntil=0;
+let started=false,dead=false,lastTime=0,lastUi=0,elapsed=0,player={x:0,z:18,yaw:0,pitch:0,hp:100},kills=0,wave=1,enemies=[],enemyId=0,joy={x:0,y:0},lookPointer=null,lastTouchLook=null,mouseDown=false,lastMouse=null;
+const keys={};
+function setWeapon(i){currentGun=(i+3)%3;document.querySelectorAll('.weaponbtn').forEach(b=>b.classList.toggle('selected',+b.dataset.weapon===currentGun));crosshair.classList.toggle('aim',aimHeld);updateUI();}
+function updateUI(){const g=guns[currentGun];waveEl.textContent=String(wave).padStart(2,'0');killsEl.textContent=String(kills).padStart(2,'0');enemyCountEl.textContent='HOSTILES '+String(enemies.length).padStart(2,'0');hpText.textContent=Math.max(0,Math.ceil(player.hp))+' / 100';hpBar.style.width=Math.max(0,player.hp)+'%';hpBar.style.background=player.hp<30?'linear-gradient(90deg,#ff4242,#ff9870)':'linear-gradient(90deg,#4af0a1,#d8ff79)';ammoNowEl.textContent=ammo[currentGun];ammoMaxEl.textContent=reserve[currentGun];weaponNameEl.textContent=g.id;reloadText.textContent=reloading?'RELOADING…':'';}
+function spawnWave(){const count=Math.min(5+(wave-1)*2,18);enemies=[];for(let i=0;i<count;i++){let a=(i/count)*Math.PI*2+(wave*.29),r=18+(i%3)*2;let x=Math.cos(a)*r,z=Math.sin(a)*r; if(Math.hypot(x-player.x,z-player.z)<12){x=-x;z=-z;}enemies.push({id:enemyId++,x,z,hp:55+wave*12,maxHp:55+wave*12,speed:1.05+Math.min(wave*.045,.7),cool:.6+Math.random()*1.2,hit:0});}updateUI();}
+function startGame(){started=true;dead=false;player={x:0,z:18,yaw:0,pitch:0,hp:100};kills=0;wave=1;ammo=guns.map(g=>g.mag);reserve=guns.map(g=>g.reserve);reloading=false;setWeapon(0);spawnWave();overlay.classList.add('hidden');hud.style.display='block';if(matchMedia('(pointer:coarse)').matches){controls.style.display='block';}else{controls.style.display='none';canvas.requestPointerLock?.();}lastTime=performance.now();}
+function gameOver(){dead=true;started=false;fireHeld=false;aimHeld=false;overlay.classList.remove('hidden');overlayDesc.innerHTML='戦闘終了。<b style="color:#54e7ff">'+kills+' TARGETS</b> を無力化し、WAVE '+String(wave).padStart(2,'0')+' まで到達。もう一度出撃して記録を更新しよう。';overlayHelp.innerHTML='<b>操作：</b>PCはWASD・マウス・左クリック・R。iPadは左スティック・右側スワイプ・FIRE。<br>武器はいつでも切替可能。遮蔽物を使い、敵の射線から外れよう。';startBtn.textContent='REDEPLOY / もう一度';hud.style.display='none';controls.style.display='none';document.exitPointerLock?.();}
+startBtn.addEventListener('click',startGame);
+function camEye(){return [player.x,1.62,player.z];}
+function viewDir(){return norm([Math.sin(player.yaw)*Math.cos(player.pitch),Math.sin(player.pitch),-Math.cos(player.yaw)*Math.cos(player.pitch)]);}
+function reload(){if(!started||reloading||ammo[currentGun]>=guns[currentGun].mag||reserve[currentGun]<=0)return;reloading=true;reloadEnd=performance.now()+guns[currentGun].reload*1000;updateUI();}
+function showHit(){hitmarker.classList.add('show');clearTimeout(showHit.t);showHit.t=setTimeout(()=>hitmarker.classList.remove('show'),100);}
+function shoot(now){if(!started||dead||reloading)return;const g=guns[currentGun];if(now<nextShot)return;if(ammo[currentGun]<=0){reload();return;}nextShot=now+g.rate;ammo[currentGun]--;recoil=Math.min(recoil+.12,.22);muzzleUntil=now+65;const eye=camEye(),forward=viewDir();let anyHit=false;
+ for(let p=0;p<g.pellets;p++){let dir=norm([forward[0]+(Math.random()-.5)*g.spread*(aimHeld?.35:1),forward[1]+(Math.random()-.5)*g.spread*(aimHeld?.35:1),forward[2]+(Math.random()-.5)*g.spread*(aimHeld?.35:1)]);let best=null,bestAlong=Infinity;
+ for(const e of enemies){const center=[e.x,1.22,e.z],to=sub(center,eye),along=dot(to,dir);if(along<=0||along>g.range||along>=bestAlong)continue;const near=[eye[0]+dir[0]*along,eye[1]+dir[1]*along,eye[2]+dir[2]*along];const miss=Math.hypot(center[0]-near[0],(center[1]-near[1])*.8,center[2]-near[2]);if(miss<.62){best=e;bestAlong=along;}}
+ if(best){const falloff=currentGun===0?Math.max(.62,1-bestAlong/100):1;best.hp-=g.damage*falloff;best.hit=.13;anyHit=true;if(best.hp<=0){enemies=enemies.filter(e=>e!==best);kills++;}}}
+ if(anyHit)showHit();updateUI();}
+function damage(amount){if(!started)return;player.hp=Math.max(0,player.hp-amount);damageflash.style.opacity='.78';setTimeout(()=>damageflash.style.opacity='0',100);updateUI();if(player.hp<=0)gameOver();}
+function blocked(x,z){if(Math.abs(x)>27.1||Math.abs(z)>27.1)return true;for(const o of obstacles){if(Math.abs(x-o.x)<o.sx/2+.58&&Math.abs(z-o.z)<o.sz/2+.58)return true;}return false;}
+function movePlayer(dt){let fw=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0)-joy.y;let st=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0)+joy.x;const l=Math.hypot(fw,st);if(l>1){fw/=l;st/=l;}const speed=(keys.ShiftLeft||keys.ShiftRight)?8.2:5.7;const fx=Math.sin(player.yaw),fz=-Math.cos(player.yaw),rx=Math.cos(player.yaw),rz=Math.sin(player.yaw);const dx=(fx*fw+rx*st)*speed*dt,dz=(fz*fw+rz*st)*speed*dt;if(!blocked(player.x+dx,player.z))player.x+=dx;if(!blocked(player.x,player.z+dz))player.z+=dz;}
+function updateEnemies(dt,now){for(const e of enemies){const dx=player.x-e.x,dz=player.z-e.z,d=Math.hypot(dx,dz)||1;if(d>6.6){const nx=e.x+dx/d*e.speed*dt,nz=e.z+dz/d*e.speed*dt;if(!blocked(nx,nz)){e.x=nx;e.z=nz;}else{const sx=e.x+(-dz/d)*e.speed*dt,sz=e.z+(dx/d)*e.speed*dt;if(!blocked(sx,sz)){e.x=sx;e.z=sz;}}}e.cool-=dt;e.hit=Math.max(0,e.hit-dt);if(d<25&&e.cool<=0){e.cool=1.15+Math.random()*1.05;if(Math.random()<Math.min(.75,.24+wave*.035))damage(4+Math.min(wave,7));}}
+ if(enemies.length===0&&started){wave++;player.hp=Math.min(100,player.hp+12);spawnWave();updateUI();}}
+function drawEnemy(e){const yaw=Math.atan2(player.x-e.x,-(player.z-e.z));const base=T(e.x,0,e.z);const group=mul(base,RY(yaw));const red=e.hit>0?[1,.9,.8]:[.55,.13,.105],dark=[.12,.16,.19],armor=[.26,.31,.34];
+ localPart(group,cube,[0,1.15,0],[.68,.82,.38],red);localPart(group,cube,[0,1.62,0],[.48,.16,.4],armor);localPart(group,sphere,[0,1.82,0],[.34,.37,.31],dark);localPart(group,cube,[0,1.85,.17],[.22,.08,.035],[.95,.34,.12]);
+ localPart(group,cube,[-.42,1.15,0],[.2,.72,.22],armor,0,0,-.13);localPart(group,cube,[.42,1.15,0],[.2,.72,.22],armor,0,0,.13);localPart(group,cube,[-.19,.48,0],[.24,.72,.25],dark);localPart(group,cube,[.19,.48,0],[.24,.72,.25],dark);
+ // Floating health bar, with a dark backing.
+ const barYaw=player.yaw;draw(cube,modelAt([e.x,2.28,e.z],[.86,.075,.07],barYaw),[.04,.06,.07]);const f=Math.max(0,e.hp/e.maxHp);if(f>.01)draw(cube,modelAt([e.x-(1-f)*.39,2.28,e.z],[.78*f,.045,.078],barYaw),[.16+.6*(1-f),.82*f,.25]);}
+function drawGun(now){const g=guns[currentGun],eye=camEye(),dir=viewDir(),right=[Math.cos(player.yaw),0,Math.sin(player.yaw)],up=[-Math.sin(player.pitch)*Math.sin(player.yaw),Math.cos(player.pitch),Math.sin(player.pitch)*Math.cos(player.yaw)];const pos=[eye[0]+right[0]*.34+up[0]*(-.28)+dir[0]*(.64-recoil),eye[1]+right[1]*.34+up[1]*(-.28)+dir[1]*(.64-recoil),eye[2]+right[2]*.34+up[2]*(-.28)+dir[2]*(.64-recoil)];let base=mul(T(...pos),RY(Math.PI-player.yaw));base=mul(base,RX(-player.pitch));
+ const body=currentGun===0?[.12,.15,.17]:currentGun===1?[.21,.17,.13]:[.14,.17,.2],metal=[.42,.49,.52],accent=[.95,.39,.13];
+ localPart(base,cube,[0,0,0],[.22,.19,currentGun===2?.62:.43],body);localPart(base,cube,[0,-.13,-.1],[.15,.1,.25],[.22,.25,.27]);localPart(base,cube,[0,.12,-.045],[.12,.035,.35],metal);
+ const barrelZ=currentGun===2?.55:currentGun===1?.43:.34;localPart(base,cylinder,[0,.015,barrelZ],[currentGun===2?.075:.06,currentGun===2?.7:.48,currentGun===2?.075:.06],metal,Math.PI/2);localPart(base,cube,[0,.095,.17],[.09,.1,.1],accent);
+ if(currentGun===2){localPart(base,cylinder,[0,.22,.02],[.14,.34,.14],darken(metal,.7),Math.PI/2);localPart(base,cube,[0,.29,.02],[.19,.035,.2],[.06,.08,.09]);}
+ if(currentGun===0){localPart(base,cube,[0,-.23,.03],[.13,.23,.14],[.07,.09,.1],0,0,-.08);localPart(base,cube,[0,-.02,-.25],[.1,.12,.27],[.17,.2,.22]);}
+ if(currentGun===1){localPart(base,cube,[0,-.17,-.01],[.16,.25,.16],[.09,.12,.14]);localPart(base,cylinder,[0,-.01,.44],[.1,.42,.1],metal,Math.PI/2);}
+ // Forearms and gloves make the first-person view feel grounded.
+ localPart(base,cube,[-.2,-.24,.0],[.19,.22,.32],[.13,.23,.28],.14,0,-.18);localPart(base,cube,[.17,-.19,.0],[.17,.2,.25],[.15,.26,.3],.12,0,.22);
+ if(now<muzzleUntil){const m=mul(base,T(0,.015,barrelZ+.46));draw(sphere,mul(m,S(.22,.22,.22)),[1,.63,.18]);}
+}
+const darken=(c,k)=>c.map(x=>x*k);
+function resize(){const dpr=Math.min(window.devicePixelRatio||1,1.55);const w=Math.floor(innerWidth*dpr),h=Math.floor(innerHeight*dpr);if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;gl.viewport(0,0,w,h);}}
+function render(now){resize();gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);const aspect=canvas.width/Math.max(1,canvas.height),fov=aimHeld?(currentGun===2?34:48):76;const eye=camEye(),dir=viewDir(),target=[eye[0]+dir[0],eye[1]+dir[1],eye[2]+dir[2]];const vp=mul(perspective(fov*Math.PI/180,aspect,.08,100),lookAt(eye,target,[0,1,0]));gl.uniformMatrix4fv(loc.vp,false,vp);
+ drawArena();for(const e of enemies)drawEnemy(e);if(started)drawGun(now);
+}
+function frame(now){const dt=Math.min(.034,(now-(lastTime||now))/1000||0);lastTime=now;if(started){elapsed+=dt;movePlayer(dt);updateEnemies(dt,now);if(fireHeld)shoot(now);if(reloading&&now>=reloadEnd){const g=guns[currentGun],need=g.mag-ammo[currentGun],take=Math.min(need,reserve[currentGun]);ammo[currentGun]+=take;reserve[currentGun]-=take;reloading=false;updateUI();}recoil=Math.max(0,recoil-dt*.75);if(now-lastUi>130){updateUI();lastUi=now;}}
+ render(now);requestAnimationFrame(frame);}
+
+window.addEventListener('resize',resize);window.addEventListener('contextmenu',e=>e.preventDefault());
+window.addEventListener('keydown',e=>{keys[e.code]=true;if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();if(!e.repeat){if(e.code==='Digit1')setWeapon(0);if(e.code==='Digit2')setWeapon(1);if(e.code==='Digit3')setWeapon(2);if(e.code==='KeyR')reload();if(e.code==='Escape'){fireHeld=false;}}});
+window.addEventListener('keyup',e=>{keys[e.code]=false;});
+canvas.addEventListener('pointerdown',e=>{if(!started)return;if(e.pointerType==='mouse'){if(e.button===0){fireHeld=true;mouseDown=true;}if(e.button===2){aimHeld=true;crosshair.classList.add('aim');}if(document.pointerLockElement!==canvas){canvas.requestPointerLock?.();lastMouse={x:e.clientX,y:e.clientY};}}else if(e.pointerType==='touch'&&e.clientX>innerWidth*.42&&e.clientY<innerHeight*.9){lookPointer=e.pointerId;lastTouchLook={x:e.clientX,y:e.clientY};canvas.setPointerCapture?.(e.pointerId);}});
+canvas.addEventListener('pointermove',e=>{if(!started)return;if(e.pointerType==='mouse'){let dx=0,dy=0;if(document.pointerLockElement===canvas){dx=e.movementX||0;dy=e.movementY||0;}else if(mouseDown&&lastMouse){dx=e.clientX-lastMouse.x;dy=e.clientY-lastMouse.y;lastMouse={x:e.clientX,y:e.clientY};}player.yaw+=dx*.0023;player.pitch=Math.max(-1.28,Math.min(1.28,player.pitch-dy*.0021));}else if(e.pointerType==='touch'&&lookPointer===e.pointerId&&lastTouchLook){const dx=e.clientX-lastTouchLook.x,dy=e.clientY-lastTouchLook.y;player.yaw+=dx*.006;player.pitch=Math.max(-1.25,Math.min(1.25,player.pitch-dy*.0055));lastTouchLook={x:e.clientX,y:e.clientY};}});
+function stopPointer(e){if(e.pointerType==='mouse'){if(e.button===0){fireHeld=false;mouseDown=false;}if(e.button===2){aimHeld=false;crosshair.classList.toggle('aim',aimHeld);}lastMouse=null;}if(e.pointerType==='touch'&&lookPointer===e.pointerId){lookPointer=null;lastTouchLook=null;}}
+canvas.addEventListener('pointerup',stopPointer);canvas.addEventListener('pointercancel',stopPointer);document.addEventListener('pointerlockchange',()=>{if(document.pointerLockElement!==canvas&&mouseDown===false)lastMouse=null;});
+document.querySelectorAll('.weaponbtn').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();setWeapon(+b.dataset.weapon);}));
+$('fireBtn').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();fireHeld=true;$('fireBtn').setPointerCapture?.(e.pointerId);});['pointerup','pointercancel','lostpointercapture'].forEach(evt=>$('fireBtn').addEventListener(evt,e=>{fireHeld=false;}));
+$('reloadBtn').addEventListener('click',e=>{e.preventDefault();reload();});
+$('aimBtn').addEventListener('pointerdown',e=>{e.preventDefault();aimHeld=true;$('aimBtn').classList.add('active');crosshair.classList.add('aim');});['pointerup','pointercancel','lostpointercapture'].forEach(evt=>$('aimBtn').addEventListener(evt,()=>{aimHeld=false;$('aimBtn').classList.remove('active');crosshair.classList.remove('aim');}));
+const stickBase=$('stickBase'),stickNub=$('stickNub');let stickId=null,stickRect=null;
+function setStick(e){if(!stickRect)return;const cx=stickRect.left+stickRect.width/2,cy=stickRect.top+stickRect.height/2,dx=e.clientX-cx,dy=e.clientY-cy,r=stickRect.width*.34,l=Math.hypot(dx,dy),q=l>r?r/l:1;const x=dx*q,y=dy*q;joy.x=x/r;joy.y=y/r;stickNub.style.left=`calc(50% + ${x}px)`;stickNub.style.top=`calc(50% + ${y}px)`;}
+stickBase.addEventListener('pointerdown',e=>{e.preventDefault();stickId=e.pointerId;stickRect=stickBase.getBoundingClientRect();stickBase.setPointerCapture(e.pointerId);setStick(e);});stickBase.addEventListener('pointermove',e=>{if(e.pointerId===stickId)setStick(e);});function resetStick(){stickId=null;joy={x:0,y:0};stickNub.style.left='50%';stickNub.style.top='50%';}['pointerup','pointercancel','lostpointercapture'].forEach(evt=>stickBase.addEventListener(evt,resetStick));
+// iOS browsers sometimes send a synthetic mouse click after touch; controls suppress it.
+document.addEventListener('touchmove',e=>{if(e.target.closest('.control'))e.preventDefault();},{passive:false});
+setWeapon(0);resize();requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
