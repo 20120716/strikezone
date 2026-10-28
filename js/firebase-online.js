@@ -52,6 +52,7 @@ async function connect(code, asHost = false) {
   roomCode = String(code).toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6);
   if (roomCode.length !== 6) { setStatus("6文字の部屋コードを入力してね。"); return; }
   hostBtn.disabled = joinBtn.disabled = true;
+  setStatus("Firebaseに接続中…");
   try {
     const credential = await signInAnonymously(auth);
     const uid = credential.user.uid;
@@ -82,7 +83,6 @@ async function connect(code, asHost = false) {
     }, err => setStatus("DBエラー: " + err.message + " — Auth/Databaseルールを確認してね"));
     codeInput.value = roomCode;
     codeInput.readOnly = true;
-    setStatus(`部屋 ${roomCode} に接続中…`);
   } catch (err) {
     setStatus("接続失敗: " + (err?.code || err?.message || "unknown") + "。匿名認証とDatabaseルールを確認してね。");
   } finally {
