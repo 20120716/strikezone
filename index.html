@@ -221,7 +221,13 @@ function updateEnemies(dt,now){for(const e of enemies){const dx=player.x-e.x,dz=
   const approach=e.role==='heavy'?(d>10?1:0):(d>(e.role==='scout'?8:7.2)?1:0);
   const vx=(dx/d*approach+(-dz/d)*strafe)*e.speed*dt,vz=(dz/d*approach+(dx/d)*strafe)*e.speed*dt;
   const nx=e.x+vx,nz=e.z+vz;if(!blocked(nx,nz)){e.x=nx;e.z=nz;}else{const sx=e.x+(-dz/d)*e.speed*dt,sz=e.z+(dx/d)*e.speed*dt;if(!blocked(sx,sz)){e.x=sx;e.z=sz;}else e.strafe*=-1;}
-  e.cool-=dt;e.hit=Math.max(0,e.hit-dt);if(d<29&&e.cool<=0){e.cool=(e.role==='heavy'?1.0:1.0)+Math.random()*.85;const chance=Math.min(.88,(e.role==='heavy'?.48:e.role==='scout'?.43:.36)+wave*.035);if(Math.random()<chance)damage((e.role==='heavy'?7:e.role==='scout'?4:5)+Math.min(wave,8));}}
+  e.cool-=dt;e.hit=Math.max(0,e.hit-dt);if(d<29&&e.cool<=0){
+    // Enemies must have a clear line of sight before they can damage the player.
+    const eye=[e.x,1.62,e.z],target=[player.x,1.15,player.z],delta=sub(target,eye),dist=Math.hypot(delta[0],delta[1],delta[2]),dir=norm(delta);
+    const wall=nearestSolidHit(eye,dir);
+    e.cool=wall<dist-.18?Math.max(.18,.35+Math.random()*.35):1.0+Math.random()*.85;
+    if(wall>=dist-.18){const chance=Math.min(.88,(e.role==='heavy'?.48:e.role==='scout'?.43:.36)+wave*.035);if(Math.random()<chance)damage((e.role==='heavy'?7:e.role==='scout'?4:5)+Math.min(wave,8));}
+  }}
  if(enemies.length===0&&started){wave++;player.hp=Math.min(100,player.hp+16);spawnWave();updateUI();}}
 function drawEnemy(e){const yaw=Math.atan2(player.x-e.x,-(player.z-e.z));const base=T(e.x,0,e.z);const group=mul(base,RY(yaw));
  const flash=e.hit>0,heavy=e.role==='heavy',scout=e.role==='scout';
