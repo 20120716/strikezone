@@ -22,25 +22,29 @@ let matchMode = "solo";
 let matchStarted = false;
 let localTeam = 0;
 let playerRef = null;
+let lobbyRef = null;
 let unsubscribe = null;
 let lastState = { x: 0, z: 0, yaw: 0, hp: 100, alive: false, kills: 0 };
 let lastWrite = 0;
 
 const style = document.createElement("style");
 style.textContent = `
-#onlinePanel{position:absolute;z-index:20;left:50%;bottom:16px;transform:translateX(-50%);width:min(420px,calc(100% - 28px));padding:10px 12px;background:rgba(4,12,22,.92);border:1px solid #54e7ff70;border-radius:12px;color:#fff;font:12px system-ui;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#onlinePanel{position:fixed;z-index:30;left:50%;top:50%;transform:translate(-50%,-50%);width:min(560px,calc(100% - 28px));max-height:84vh;overflow:auto;padding:clamp(18px,4vw,30px);background:rgba(4,10,18,.97);border:1px solid #54e7ff70;color:#fff;font:12px system-ui;display:none;gap:10px;align-items:center;flex-wrap:wrap;box-shadow:0 20px 80px #000b}#onlinePanel.open{display:flex}#roomList{width:100%;display:flex;flex-direction:column;gap:7px;margin-top:4px}#roomList button{width:100%;text-align:left;display:flex;justify-content:space-between;gap:10px;background:#101f30;border:1px solid #2e5266;padding:12px}#roomList .empty{color:#9fb6c5;padding:12px;border:1px dashed #365264;border-radius:7px}
 #onlinePanel input{min-width:0;flex:1;width:100px;background:#0d1b29;border:1px solid #557080;color:white;border-radius:7px;padding:9px;text-transform:uppercase}#onlinePanel select{background:#0d1b29;color:#fff;border:1px solid #557080;border-radius:7px;padding:9px;max-width:100%}
 #onlinePanel button{background:#126273;border:1px solid #54e7ff;color:white;border-radius:7px;padding:9px 10px;font-weight:800}
 #onlineStatus{width:100%;color:#b9d5df;font-size:11px}#onlinePanel .onlineTitle{font-weight:900;color:#54e7ff;letter-spacing:.1em}
-@media(max-width:600px){#onlinePanel{bottom:8px;gap:6px}#onlinePanel button{padding:8px}}
+@media(max-width:600px){#onlinePanel{gap:8px}#onlinePanel button{padding:9px}}
 `;
 document.head.append(style);
 
 const panel = document.createElement("div");
 panel.id = "onlinePanel";
-panel.innerHTML = `<span class="onlineTitle">ONLINE</span><input id="roomCodeInput" maxlength="6" placeholder="ROOM CODE (6)" aria-label="Room code"><button id="hostRoomBtn">部屋を作る</button><button id="joinRoomBtn">参加</button><select id="matchModeSelect" aria-label="試合モード" hidden><option value="solo">1v1v1v1v1v1v1v1</option><option value="squads">2v2v2v2</option></select><button id="startMatchBtn" hidden>試合開始</button><div id="onlineStatus">先に部屋を作成、またはコードで参加してね。</div>`;
+panel.innerHTML = `<span class="onlineTitle" style="font-size:22px;width:100%">ONLINE / ロビー</span><button id="backMenuBtn" style="margin-left:auto;background:#263443;border-color:#607586">← メニュー</button><button id="hostRoomBtn">＋ 部屋を作る</button><input id="roomCodeInput" maxlength="6" placeholder="ROOM CODE (6)" aria-label="部屋コード"><button id="joinRoomBtn">コードで参加</button><div id="onlineStatus">部屋を作るか、下の一覧から参加してね。</div><div style="width:100%;font-weight:900;color:#54e7ff;margin-top:8px">公開中の部屋</div><div id="roomList"><div class="empty">部屋一覧を読み込み中…</div></div><select id="matchModeSelect" aria-label="試合モード" hidden><option value="solo">1v1v1v1v1v1v1v1</option><option value="squads">2v2v2v2</option></select><button id="startMatchBtn" hidden>試合開始</button>`;
 document.body.append(panel);
 const statusEl = document.getElementById("onlineStatus");
+const roomListEl = document.getElementById("roomList");
+document.getElementById("backMenuBtn").addEventListener("click", () => { panel.classList.remove("open"); window.dispatchEvent(new CustomEvent("strikezone:hide-online")); });
+window.addEventListener("strikezone:show-online", () => { panel.classList.add("open"); });
 const codeInput = document.getElementById("roomCodeInput");
 const hostBtn = document.getElementById("hostRoomBtn");
 const joinBtn = document.getElementById("joinRoomBtn");
@@ -49,6 +53,21 @@ const modeSelect = document.getElementById("matchModeSelect");
 const setStatus = msg => { statusEl.textContent = msg; };
 
 function makeCode(){ return Math.random().toString(36).slice(2,8).toUpperCase().padEnd(6,"X"); }
+
+const lobbyDirectoryRef = ref(db, "lobbies");
+onValue(lobbyDirectoryRef, snap => {
+  const lobbies = snap.val() || {};
+  const entries = Object.entries(lobbies).filter(([code, room]) => room && room.open && typeof room.count === "number" && room.count < 8);
+  roomListEl.replaceChildren();
+  if (!entries.length) { const empty=document.createElement("div"); empty.className="empty"; empty.textContent="公開中の部屋はまだないよ。最初の部屋を作ってみよう！"; roomListEl.append(empty); return; }
+  entries.sort((a,b)=>(b[1].updatedAt||0)-(a[1].updatedAt||0));
+  for (const [code, room] of entries) {
+    const button=document.createElement("button"), left=document.createElement("span"), right=document.createElement("span");
+    left.textContent="部屋 "+code+" · "+(room.mode==="squads"?"2v2v2v2":"1v1×8");
+    right.textContent=room.count+"/8人  ›"; button.append(left,right);
+    button.addEventListener("click",()=>{codeInput.value=code; connect(code,false);}); roomListEl.append(button);
+  }
+}, err => { roomListEl.textContent="部屋一覧を読み込めないよ。FirebaseのDatabaseルールで lobbies の読み取りを許可してね。"; });
 
 async function connect(code, asHost = false) {
   roomCode = String(code).toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6);
@@ -61,6 +80,7 @@ async function connect(code, asHost = false) {
     isRoomHost = asHost;
     if (asHost) matchMode = modeSelect.value || "solo";
     playerRef = ref(db, `rooms/${roomCode}/players/${uid}`);
+    lobbyRef = ref(db, `lobbies/${roomCode}`);
     const playersRef = ref(db, `rooms/${roomCode}/players`);
     const existingSnap = await new Promise((resolve, reject) => { let stop = () => {}; stop = onValue(playersRef, snap => { stop(); resolve(snap); }, err => { stop(); reject(err); }, { onlyOnce: true }); });
     const existing = existingSnap.val() || {};
@@ -68,6 +88,7 @@ async function connect(code, asHost = false) {
     if (unsubscribe) unsubscribe();
     matchStarted = false;
     await set(playerRef, { uid, x:lastState.x, z:lastState.z, yaw:lastState.yaw, hp:lastState.hp, alive:lastState.alive, kills:lastState.kills, host:isRoomHost, mode:matchMode, started:false, team:teamFor(uid, matchMode), updatedAt:serverTimestamp() });
+    if (isRoomHost) { await set(lobbyRef, { open:true, mode:matchMode, count:Object.keys(existing).length+1, updatedAt:Date.now() }); await onDisconnect(lobbyRef).remove(); }
     await onDisconnect(playerRef).remove();
     unsubscribe = onValue(ref(db, `rooms/${roomCode}/players`), snap => {
       const players = snap.val() || {};
@@ -80,6 +101,7 @@ async function connect(code, asHost = false) {
       window.STRIKEZONE_REMOTE_PLAYERS = others;
       window.dispatchEvent(new CustomEvent("strikezone:players", { detail: { players: others, count: Object.keys(players).length, roomCode } }));
       const count = Object.keys(players).length;
+      if (isRoomHost && lobbyRef && !matchStarted) update(lobbyRef, { open:true, mode:matchMode, count, updatedAt:Date.now() }).catch(()=>{});
       const bots = Math.max(0, 8 - count);
       const modeLabel = matchMode === "squads" ? "2v2v2v2" : "1v1×8";
       modeSelect.hidden = !isRoomHost;
@@ -99,7 +121,7 @@ joinBtn.addEventListener("click", () => connect(codeInput.value, false));
 modeSelect.addEventListener("change", async () => {
   matchMode = modeSelect.value || "solo";
   if (playerRef && isRoomHost && !matchStarted) {
-    try { await update(playerRef, { mode: matchMode, team: teamFor(auth.currentUser.uid, matchMode) }); }
+    try { await update(playerRef, { mode: matchMode, team: teamFor(auth.currentUser.uid, matchMode) }); if(lobbyRef) await update(lobbyRef,{mode:matchMode,updatedAt:Date.now()}); }
     catch (err) { setStatus("モード保存失敗: " + (err?.code || err?.message || "unknown")); }
   }
 });
@@ -108,6 +130,7 @@ startMatchBtn.addEventListener("click", async () => {
   matchMode = modeSelect.value || "solo";
   try {
     await update(playerRef, { mode: matchMode, started: true, team: teamFor(auth.currentUser.uid, matchMode) });
+    if(lobbyRef) await update(lobbyRef,{open:false,mode:matchMode,updatedAt:Date.now()});
     matchStarted = true;
     window.dispatchEvent(new CustomEvent("strikezone:connected", { detail: { roomCode, mode: matchMode, host:true } }));
     setStatus("試合開始！");
