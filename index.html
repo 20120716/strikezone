@@ -89,6 +89,7 @@ const mainMenu = $('mainMenu');
 const onlineMenuBtn = $('onlineMenuBtn');
 onlineMenuBtn.addEventListener('click', () => { mainMenu.classList.add('hidden'); window.dispatchEvent(new CustomEvent('strikezone:show-online')); });
 window.addEventListener('strikezone:hide-online', () => { mainMenu.classList.remove('hidden'); });
+window.addEventListener('strikezone:waiting-room', (event) => { mainMenu.classList.add('hidden'); overlayDesc.textContent = '部屋 ' + (event.detail?.roomCode || '') + ' に参加しました。ホストが試合を開始するまで待機中…'; overlayHelp.textContent = 'ホストが試合を開始すると、自動的にゲームへ移動します。'; overlay.classList.remove('hidden'); });
 
 const hpText=$('hpText'), hpBar=$('hpBar'), waveEl=$('wave'), killsEl=$('kills'), enemyCountEl=$('enemyCount');
 const ammoNowEl=$('ammoNow'), ammoMaxEl=$('ammoMax'), weaponNameEl=$('weaponName'), reloadText=$('reloadText');
