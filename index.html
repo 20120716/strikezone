@@ -60,14 +60,17 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080e16;col
   <div class="panel">
     <div class="eyebrow">FIRST-PERSON COMBAT / 3D WEB GAME</div>
     <h1 class="title">STRIKE<em>ZONE</em></h1>
-    <div id="overlayDesc" class="desc">低ポリゴンの3D訓練エリアで、敵のウェーブを突破しよう。遮蔽物を使い、3種類の武器を切り替えて戦うFPS。</div>
-    <div class="guns">
-      <div class="gun"><strong>01 / VECTOR</strong><span>SMG<br>高連射・扱いやすい</span></div>
-      <div class="gun"><strong>02 / BREACH</strong><span>SHOTGUN<br>近距離・6ペレット</span></div>
-      <div class="gun"><strong>03 / LONGSHOT</strong><span>SNIPER<br>高威力・長射程</span></div>
+    <div id="overlayDesc" class="desc">戦場へ出撃しよう。ひとりで練習するか、オンラインで仲間と合流。</div>
+    <div id="mainMenu">
+      <button id="startBtn" class="startbtn">PLAY / ソロプレイ</button>
+      <button id="onlineMenuBtn" class="startbtn" style="margin-top:10px;background:linear-gradient(90deg,#243b62,#126273)">ONLINE / オンライン</button>
+      <div class="guns">
+        <div class="gun"><strong>01 / VECTOR</strong><span>SMG<br>高連射・扱いやすい</span></div>
+        <div class="gun"><strong>02 / BREACH</strong><span>SHOTGUN<br>近距離・6ペレット</span></div>
+        <div class="gun"><strong>03 / LONGSHOT</strong><span>SNIPER<br>高威力・長射程</span></div>
+      </div>
+      <div id="overlayHelp" class="help"><b>PC：</b>WASD 移動 / マウス 視点 / 左クリック 射撃 / 右クリック ADS / 1・2・3 武器切替 / R リロード<br><b>iPad：</b>左スティック 移動 / 右側スワイプ 視点 / FIRE 射撃 / AIM 照準<br>Safariは横画面推奨。JavaScript有効が必要です。</div>
     </div>
-    <button id="startBtn" class="startbtn">DEPLOY / ゲーム開始</button>
-    <div id="overlayHelp" class="help"><b>PC：</b>WASD 移動 / マウス 視点 / 左クリック 射撃 / 右クリック ADS / 1・2・3 武器切替 / R リロード<br><b>iPad：</b>左スティック 移動 / 右側スワイプ 視点 / FIRE 射撃 / AIM 照準<br>Safariは横画面推奨。外部ライブラリ・画像素材なしで動作します（JavaScript有効が必要）。</div>
   </div>
 </div>
 <script src="./js/map-data.js"></script>
@@ -82,6 +85,11 @@ const startBtn = document.getElementById('startBtn');const overlayDesc = documen
 if (!gl) { overlayDesc.textContent = 'このブラウザではWebGLを利用できません。Safariの設定でJavaScriptとWebGLが有効になっているか確認してください。'; startBtn.textContent='WEBGL NOT AVAILABLE'; startBtn.disabled=true; return; }
 const $ = id => document.getElementById(id);
 const hud = $('hud'), controls = $('controls');
+const mainMenu = $('mainMenu');
+const onlineMenuBtn = $('onlineMenuBtn');
+onlineMenuBtn.addEventListener('click', () => { mainMenu.classList.add('hidden'); window.dispatchEvent(new CustomEvent('strikezone:show-online')); });
+window.addEventListener('strikezone:hide-online', () => { mainMenu.classList.remove('hidden'); });
+
 const hpText=$('hpText'), hpBar=$('hpBar'), waveEl=$('wave'), killsEl=$('kills'), enemyCountEl=$('enemyCount');
 const ammoNowEl=$('ammoNow'), ammoMaxEl=$('ammoMax'), weaponNameEl=$('weaponName'), reloadText=$('reloadText');
 const crosshair=$('crosshair'), hitmarker=$('hitmarker'), damageflash=$('damageflash');
