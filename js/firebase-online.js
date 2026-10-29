@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
-import { getDatabase, ref, set, onValue, onDisconnect, remove, serverTimestamp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
+import { getDatabase, ref, set, update, onValue, onDisconnect, remove, serverTimestamp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -19,6 +19,7 @@ const auth = getAuth(app);
 let roomCode = null;
 let isRoomHost = false;
 let matchMode = "solo";
+let matchStarted = false;
 let localTeam = 0;
 let playerRef = null;
 let unsubscribe = null;
@@ -37,12 +38,13 @@ document.head.append(style);
 
 const panel = document.createElement("div");
 panel.id = "onlinePanel";
-panel.innerHTML = `<span class="onlineTitle">ONLINE</span><select id="matchModeSelect" aria-label="試合モード"><option value="solo">1v1v1v1v1v1v1v1</option><option value="squads">2v2v2v2</option></select><input id="roomCodeInput" maxlength="6" placeholder="ROOM CODE (6)" aria-label="Room code"><button id="hostRoomBtn">部屋を作る</button><button id="joinRoomBtn">参加</button><div id="onlineStatus">モードを選んで部屋を作成。最大8人、足りない枠はAI補充予定。</div>`;
+panel.innerHTML = `<span class="onlineTitle">ONLINE</span><input id="roomCodeInput" maxlength="6" placeholder="ROOM CODE (6)" aria-label="Room code"><button id="hostRoomBtn">部屋を作る</button><button id="joinRoomBtn">参加</button><select id="matchModeSelect" aria-label="試合モード" hidden><option value="solo">1v1v1v1v1v1v1v1</option><option value="squads">2v2v2v2</option></select><button id="startMatchBtn" hidden>試合開始</button><div id="onlineStatus">先に部屋を作成、またはコードで参加してね。</div>`;
 document.body.append(panel);
 const statusEl = document.getElementById("onlineStatus");
 const codeInput = document.getElementById("roomCodeInput");
 const hostBtn = document.getElementById("hostRoomBtn");
 const joinBtn = document.getElementById("joinRoomBtn");
+const startMatchBtn = document.getElementById("startMatchBtn");
 const modeSelect = document.getElementById("matchModeSelect");
 const setStatus = msg => { statusEl.textContent = msg; };
 
@@ -64,14 +66,15 @@ async function connect(code, asHost = false) {
     const existing = existingSnap.val() || {};
     if (!existing[uid] && Object.keys(existing).length >= 8) { setStatus("この部屋は満員（最大8人）。別の部屋を作ってね。"); return; }
     if (unsubscribe) unsubscribe();
-    await set(playerRef, { uid, x:lastState.x, z:lastState.z, yaw:lastState.yaw, hp:lastState.hp, alive:lastState.alive, kills:lastState.kills, host:isRoomHost, mode:matchMode, team:teamFor(uid, matchMode), updatedAt:serverTimestamp() });
+    matchStarted = false;
+    await set(playerRef, { uid, x:lastState.x, z:lastState.z, yaw:lastState.yaw, hp:lastState.hp, alive:lastState.alive, kills:lastState.kills, host:isRoomHost, mode:matchMode, started:false, team:teamFor(uid, matchMode), updatedAt:serverTimestamp() });
     await onDisconnect(playerRef).remove();
-    window.dispatchEvent(new CustomEvent("strikezone:connected", { detail: { roomCode, mode: matchMode, host: isRoomHost } }));
     unsubscribe = onValue(ref(db, `rooms/${roomCode}/players`), snap => {
       const players = snap.val() || {};
       const list = Object.values(players).filter(p => p && typeof p.x === "number" && typeof p.z === "number");
       const host = list.find(p => p.host);
       if (!isRoomHost && host && host.mode) { matchMode = host.mode; modeSelect.value = matchMode; }
+      if (!isRoomHost && host && host.started && !matchStarted) { matchStarted = true; window.dispatchEvent(new CustomEvent("strikezone:connected", { detail: { roomCode, mode: matchMode, host:false } })); }
       localTeam = teamFor(uid, matchMode, list);
       const others = list.filter(p => p.uid !== uid).map(p => ({ ...p, team: teamFor(p.uid, matchMode, list) }));
       window.STRIKEZONE_REMOTE_PLAYERS = others;
@@ -79,7 +82,9 @@ async function connect(code, asHost = false) {
       const count = Object.keys(players).length;
       const bots = Math.max(0, 8 - count);
       const modeLabel = matchMode === "squads" ? "2v2v2v2" : "1v1×8";
-      setStatus(`部屋 ${roomCode} · ${modeLabel} · ${count}/8人 · AI枠 ${bots} · あなたのチーム ${localTeam + 1}`);
+      modeSelect.hidden = !isRoomHost;
+      startMatchBtn.hidden = !isRoomHost;
+      setStatus(isRoomHost && !matchStarted ? `部屋 ${roomCode} · ${count}/8人 · モードを選んで試合開始！` : `部屋 ${roomCode} · ${modeLabel} · ${count}/8人 · AI枠 ${bots} · あなたのチーム ${localTeam + 1}`);
     }, err => setStatus("DBエラー: " + err.message + " — Auth/Databaseルールを確認してね"));
     codeInput.value = roomCode;
     codeInput.readOnly = true;
@@ -91,6 +96,23 @@ async function connect(code, asHost = false) {
 }
 hostBtn.addEventListener("click", () => { const code = makeCode(); codeInput.value = code; connect(code, true); });
 joinBtn.addEventListener("click", () => connect(codeInput.value, false));
+modeSelect.addEventListener("change", async () => {
+  matchMode = modeSelect.value || "solo";
+  if (playerRef && isRoomHost && !matchStarted) {
+    try { await update(playerRef, { mode: matchMode, team: teamFor(auth.currentUser.uid, matchMode) }); }
+    catch (err) { setStatus("モード保存失敗: " + (err?.code || err?.message || "unknown")); }
+  }
+});
+startMatchBtn.addEventListener("click", async () => {
+  if (!playerRef || !isRoomHost || matchStarted) return;
+  matchMode = modeSelect.value || "solo";
+  try {
+    await update(playerRef, { mode: matchMode, started: true, team: teamFor(auth.currentUser.uid, matchMode) });
+    matchStarted = true;
+    window.dispatchEvent(new CustomEvent("strikezone:connected", { detail: { roomCode, mode: matchMode, host:true } }));
+    setStatus("試合開始！");
+  } catch (err) { setStatus("試合開始失敗: " + (err?.code || err?.message || "unknown")); }
+});
 
 function teamFor(uid, mode, players = []) {
   const hashUid = value => [...String(value)].reduce((n, c) => (n * 31 + c.charCodeAt(0)) >>> 0, 7);
@@ -105,7 +127,7 @@ window.addEventListener("strikezone:state", event => {
   const now = performance.now();
   if (now - lastWrite < 100) return;
   lastWrite = now;
-  set(playerRef, { uid: auth.currentUser.uid, ...lastState, host:isRoomHost, mode:matchMode, team:teamFor(auth.currentUser.uid, matchMode), updatedAt: serverTimestamp() }).catch(err => setStatus("同期エラー: " + (err?.code || err?.message || "unknown")));
+  update(playerRef, { ...lastState, host:isRoomHost, mode:matchMode, started:matchStarted, team:teamFor(auth.currentUser.uid, matchMode), updatedAt: serverTimestamp() }).catch(err => setStatus("同期エラー: " + (err?.code || err?.message || "unknown")));
 });
 
 window.addEventListener("beforeunload", () => { if (unsubscribe) unsubscribe(); if (playerRef) remove(playerRef).catch(() => {}); });
