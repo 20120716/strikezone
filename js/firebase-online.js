@@ -110,6 +110,10 @@ async function connect(code, asHost = false) {
     }, err => setStatus("DBエラー: " + err.message + " — Auth/Databaseルールを確認してね"));
     codeInput.value = roomCode;
     codeInput.readOnly = true;
+    if (!isRoomHost) {
+      panel.classList.remove("open");
+      window.dispatchEvent(new CustomEvent("strikezone:waiting-room", { detail: { roomCode } }));
+    }
   } catch (err) {
     setStatus("接続失敗: " + (err?.code || err?.message || "unknown") + "。匿名認証とDatabaseルールを確認してね。");
   } finally {
